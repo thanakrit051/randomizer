@@ -421,7 +421,7 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
         </div>
         <div class="card">
           <div class="card-title">📈 จำนวนสมาชิกแต่ละกลุ่ม</div>
-          <div id="groupSizeChart"><p style="color:var(--text3);font-size:0.82rem">ยังไม่ได้จัดกลุ่ม</p></div>
+          <div id="groupSizeChart" style="min-height:160px"><p style="color:var(--text3);font-size:0.82rem">ยังไม่ได้จัดกลุ่ม</p></div>
         </div>
       </div>
 
@@ -579,7 +579,8 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
               <option value="students">รายชื่อนักเรียน (ทุกห้อง)</option>
               <option value="students_room">รายชื่อนักเรียน (เลือกห้อง)</option>
               <option value="groups">รายชื่อกลุ่ม</option>
-              <option value="leaders">หัวหน้ากลุ่ม</option>
+              <option value="leaders">หัวหน้ากลุ่ม (ทุกกลุ่ม)</option>
+              <option value="leaders_pick">หัวหน้ากลุ่ม (เลือกกลุ่ม)</option>
               <option value="custom">กำหนดเอง</option>
             </select>
           </div>
@@ -588,6 +589,14 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
               <label>เลือกห้อง</label>
               <select id="wheelRoomFilter" onchange="updateWheelItems()">
                 <option value="">-- เลือกห้อง --</option>
+              </select>
+            </div>
+          </div>
+          <div id="wheelGroupWrap" style="display:none">
+            <div class="form-group">
+              <label>เลือกกลุ่ม</label>
+              <select id="wheelGroupFilter" onchange="updateWheelItems()">
+                <option value="">-- เลือกกลุ่ม --</option>
               </select>
             </div>
           </div>
@@ -1209,12 +1218,19 @@ function updateWheelItems(){
   const src=document.getElementById('wheelSource').value;
   document.getElementById('customItemsWrap').style.display=src==='custom'?'block':'none';
   document.getElementById('wheelRoomWrap').style.display=src==='students_room'?'block':'none';
+  document.getElementById('wheelGroupWrap').style.display=src==='leaders_pick'?'block':'none';
   // populate room dropdown
   if(src==='students_room'){
     const sel=document.getElementById('wheelRoomFilter');
     const rooms=[...new Set(students.map(s=>s.room))].sort();
     const cur=sel.value;
     sel.innerHTML='<option value="">-- เลือกห้อง --</option>'+rooms.map(r=>`<option value="${r}"${r===cur?' selected':''}>${r}</option>`).join('');
+  }
+  // populate group dropdown for leaders_pick
+  if(src==='leaders_pick'){
+    const sel=document.getElementById('wheelGroupFilter');
+    const cur=sel.value;
+    sel.innerHTML='<option value="">-- เลือกกลุ่ม --</option>'+groups.map((g,i)=>`<option value="${i}"${String(i)===cur?' selected':''}>${g.name}</option>`).join('');
   }
   if(src==='students') wheelItemsAll=students.map(s=>s.name);
   else if(src==='students_room'){
@@ -1223,6 +1239,16 @@ function updateWheelItems(){
   }
   else if(src==='groups') wheelItemsAll=groups.map(g=>g.name);
   else if(src==='leaders') wheelItemsAll=groups.map(g=>g.members[0]?.name||'').filter(Boolean);
+  else if(src==='leaders_pick'){
+    const gi=document.getElementById('wheelGroupFilter')?.value;
+    if(gi===''||gi===undefined||gi===null){
+      // no group selected yet — show all members of all groups as options
+      wheelItemsAll=groups.map(g=>g.members[0]?.name||'').filter(Boolean);
+    } else {
+      const g=groups[+gi];
+      wheelItemsAll=g?g.members.map(m=>m.name):[];
+    }
+  }
   else return;
   wheelItems=[...wheelItemsAll];
   document.getElementById('wheelItemCount').textContent=wheelItems.length;
@@ -1737,6 +1763,8 @@ setTimeout(()=>restoreSheetsUrl(), 100);
 
 // Initial wheel draw
 setTimeout(()=>drawWheel(),100);
+// Redraw group size chart on resize
+window.addEventListener('resize',function(){if(groups.length) updateGroupSizeChart();});
 
 // ===== GOOGLE SHEETS IMPORT =====
 function extractSheetId(url){
@@ -1824,14 +1852,69 @@ function updateGroupSizeChart(){
   var el=document.getElementById('groupSizeChart');
   if(!el) return;
   if(!groups.length){el.innerHTML='<p style="color:var(--text3);font-size:0.82rem">ยังไม่ได้จัดกลุ่ม</p>';return;}
-  var max=Math.max.apply(null,groups.map(function(g){return g.members.length;}));
-  el.innerHTML=groups.map(function(g){
-    var pct=max?Math.round(g.members.length/max*100):0;
-    return '<div class="chart-bar">'
-      +'<span class="chart-label" style="color:'+g.color+';font-size:0.7rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+g.name+'</span>'
-      +'<div class="chart-track"><div class="chart-fill" style="width:'+pct+'%;background:'+g.color+'">'+g.members.length+' คน</div></div>'
-      +'</div>';
-  }).join('');
+  // Build canvas bar chart
+  var canvasId='gscCanvas';
+  el.innerHTML='<canvas id="'+canvasId+'" style="width:100%;height:160px"></canvas>';
+  var canvas=document.getElementById(canvasId);
+  var dpr=window.devicePixelRatio||1;
+  var W=canvas.parentElement.offsetWidth||300;
+  var H=160;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  var ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  var n=groups.length;
+  var sizes=groups.map(function(g){return g.members.length;});
+  var maxVal=Math.max.apply(null,sizes)||1;
+  var padL=8,padR=8,padT=10,padB=32;
+  var chartW=W-padL-padR;
+  var chartH=H-padT-padB;
+  var barW=Math.max(6,Math.floor(chartW/n)-6);
+  var gap=(chartW-barW*n)/(n+1);
+  // Draw gridlines
+  ctx.strokeStyle='rgba(0,0,0,0.06)'; ctx.lineWidth=1;
+  [0.25,0.5,0.75,1].forEach(function(t){
+    var y=padT+chartH*(1-t);
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
+    ctx.fillStyle='#94a3b8';ctx.font='9px Kanit';ctx.textAlign='left';
+    ctx.fillText(Math.round(maxVal*t),padL,y-2);
+  });
+  // Draw bars + labels
+  groups.forEach(function(g,i){
+    var x=padL+gap+(barW+gap)*i;
+    var bh=chartH*(g.members.length/maxVal);
+    var y=padT+chartH-bh;
+    // bar
+    ctx.fillStyle=g.color;
+    ctx.beginPath();
+    if(ctx.roundRect){ctx.roundRect(x,y,barW,bh,4);}
+    else{ctx.rect(x,y,barW,bh);}
+    ctx.fill();
+    // value on top
+    ctx.fillStyle='#334155';ctx.font='bold 10px Kanit';ctx.textAlign='center';
+    ctx.fillText(g.members.length,x+barW/2,y-3);
+    // label below
+    ctx.fillStyle='#64748b';ctx.font='9px Kanit';ctx.textAlign='center';
+    var lbl=g.name.length>5?g.name.slice(0,5)+'…':g.name;
+    ctx.fillText(lbl,x+barW/2,H-padB+14);
+  });
+  // Draw line connecting bar tops
+  ctx.beginPath();ctx.strokeStyle='rgba(37,99,235,0.5)';ctx.lineWidth=2;
+  ctx.setLineDash([4,3]);
+  groups.forEach(function(g,i){
+    var x=padL+gap+(barW+gap)*i+barW/2;
+    var y=padT+chartH*(1-g.members.length/maxVal);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Dots on line
+  groups.forEach(function(g,i){
+    var x=padL+gap+(barW+gap)*i+barW/2;
+    var y=padT+chartH*(1-g.members.length/maxVal);
+    ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);
+    ctx.fillStyle='#2563eb';ctx.fill();
+  });
 }
 
 // ===== DASH ALERTS =====
