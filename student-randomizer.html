@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Group Randomizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --bg: #f0f4f8;
+  --bg2: #ffffff;
+  --bg3: #e2e8f0;
+  --card: rgba(255,255,255,0.95);
+  --glass: rgba(59,130,246,0.04);
+  --border: rgba(0,0,0,0.08);
+  --blue: #2563eb;
+  --blue2: #1d4ed8;
+  --indigo: #4f46e5;
+  --cyan: #0891b2;
+  --text: #1e293b;
+  --text2: #475569;
+  --text3: #94a3b8;
+  --green: #059669;
+  --pink: #db2777;
+  --amber: #d97706;
+  --red: #dc2626;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 16px rgba(0,0,0,0.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Kanit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* Particle BG */
+#particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+
+/* Layout */
+.app{position:relative;z-index:1;display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:transform 0.3s;z-index:100}
+.sidebar-logo{padding:1.25rem 1rem;border-bottom:1px solid var(--border)}
+.sidebar-logo h1{font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--indigo));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-logo p{font-size:0.7rem;color:var(--text3);margin-top:2px}
+.sidebar-nav{flex:1;padding:0.75rem 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:0.65rem 1rem;cursor:pointer;border-radius:0;transition:all 0.2s;color:var(--text2);font-size:0.85rem;border-left:3px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--glass)}
+.nav-item.active{color:var(--blue);background:rgba(37,99,235,0.08);border-left-color:var(--blue)}
+.nav-icon{font-size:1.1rem;width:20px;text-align:center}
+.sidebar-footer{padding:0.75rem 1rem;border-top:1px solid var(--border);font-size:0.7rem;color:var(--text3)}
+
+/* Main */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{padding:0.85rem 1.5rem;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);display:flex;align-items:center;gap:1rem;position:sticky;top:0;z-index:50}
+.topbar h2{font-size:1.1rem;font-weight:600;flex:1}
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:1.3rem;cursor:pointer;padding:4px}
+.content{flex:1;padding:1.5rem}
+
+/* Cards */
+.card{background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem}
+.card-title{font-size:0.95rem;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:8px}
+
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;text-align:center;transition:transform 0.2s}
+.stat-card:hover{transform:translateY(-2px)}
+.stat-num{font-size:2rem;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--indigo));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{font-size:0.75rem;color:var(--text2);margin-top:4px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0.55rem 1.1rem;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:'Kanit',sans-serif;font-size:0.85rem;font-weight:500;transition:all 0.2s;white-space:nowrap}
+.btn:active{transform:scale(0.97)}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--indigo));color:#fff;box-shadow:0 2px 12px rgba(99,102,241,0.4)}
+.btn-primary:hover{box-shadow:0 4px 20px rgba(99,102,241,0.6)}
+.btn-secondary{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg3)}
+.btn-success{background:linear-gradient(135deg,var(--green),#059669);color:#fff}
+.btn-danger{background:linear-gradient(135deg,var(--red),#dc2626);color:#fff}
+.btn-amber{background:linear-gradient(135deg,var(--amber),#d97706);color:#fff}
+.btn-sm{padding:0.35rem 0.75rem;font-size:0.78rem}
+.btn-icon{padding:0.45rem 0.65rem}
+
+/* Table */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:0.82rem}
+th{background:rgba(255,255,255,0.05);padding:0.6rem 0.75rem;text-align:left;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:0.55rem 0.75rem;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--glass)}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:500}
+.badge-m{background:rgba(59,130,246,0.2);color:var(--blue2)}
+.badge-f{background:rgba(236,72,153,0.2);color:var(--pink)}
+.badge-high{background:rgba(16,185,129,0.2);color:var(--green)}
+.badge-mid{background:rgba(245,158,11,0.2);color:var(--amber)}
+.badge-low{background:rgba(239,68,68,0.2);color:var(--red)}
+
+/* Forms */
+input,select,textarea{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.55rem 0.85rem;color:var(--text);font-family:'Kanit',sans-serif;font-size:0.85rem;width:100%;transition:border-color 0.2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+select option{background:var(--bg2)}
+label{font-size:0.82rem;color:var(--text2);margin-bottom:4px;display:block}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-group{margin-bottom:1rem}
+
+/* Upload */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:2.5rem;text-align:center;cursor:pointer;transition:all 0.3s;background:var(--glass)}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--blue);background:rgba(59,130,246,0.08)}
+.upload-zone p{color:var(--text2);font-size:0.85rem;margin-top:0.5rem}
+.upload-zone .upload-icon{font-size:2.5rem}
+
+/* Group Cards */
+.groups-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+.group-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all 0.3s;animation:fadeInUp 0.4s ease both}
+.group-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.group-header{padding:0.75rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.group-name{font-size:0.9rem;font-weight:600}
+.group-count{font-size:0.7rem;opacity:0.8;background:rgba(0,0,0,0.2);padding:2px 8px;border-radius:20px}
+.group-body{padding:0.75rem 1rem}
+.member-item{display:flex;align-items:center;gap:8px;padding:0.3rem 0;font-size:0.8rem;border-radius:6px;transition:background 0.2s;cursor:grab}
+.member-item:hover{background:var(--glass)}
+.member-item.dragging{opacity:0.4}
+.member-avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:600;flex-shrink:0}
+.group-card.drag-over{border-color:var(--blue);background:rgba(59,130,246,0.05)}
+
+/* Wheel */
+#wheelCanvas{border-radius:50%;cursor:pointer}
+.wheel-wrap{display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+.wheel-result{text-align:center;padding:1rem 2rem;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);min-width:200px;transition:all 0.3s}
+.wheel-result .result-name{font-size:1.4rem;font-weight:700;color:var(--blue)}
+
+/* Charts */
+.chart-bar{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.chart-label{width:80px;font-size:0.75rem;color:var(--text2);text-align:right;flex-shrink:0}
+.chart-track{flex:1;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;height:18px}
+.chart-fill{height:100%;border-radius:4px;transition:width 0.8s ease;display:flex;align-items:center;padding-left:8px;font-size:0.7rem;font-weight:600}
+.donut-wrap{display:flex;align-items:center;gap:1.5rem}
+.donut-legend{display:flex;flex-direction:column;gap:6px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:0.78rem}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);animation:fadeIn 0.2s}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;animation:slideUp 0.3s ease}
+.modal-title{font-size:1rem;font-weight:600;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:300;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.65rem 1rem;font-size:0.82rem;animation:slideLeft 0.3s ease;display:flex;align-items:center;gap:8px;pointer-events:auto;box-shadow:var(--shadow)}
+.toast.success{border-left:3px solid var(--green);color:var(--green)}
+.toast.error{border-left:3px solid var(--red);color:var(--red)}
+.toast.info{border-left:3px solid var(--blue);color:var(--blue2)}
+
+/* Number badge */
+.num-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:0.7rem;font-weight:600;background:rgba(255,255,255,0.1);flex-shrink:0}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;margin-bottom:1.25rem;overflow-x:auto}
+.tab{padding:0.45rem 1rem;border-radius:6px;cursor:pointer;font-size:0.82rem;color:var(--text2);white-space:nowrap;transition:all 0.2s;border:none;background:none;font-family:'Kanit',sans-serif}
+.tab.active{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,0.4)}
+
+/* Toggle */
+.toggle-wrap{display:flex;align-items:center;gap:8px;font-size:0.82rem}
+.toggle{position:relative;display:inline-block;width:38px;height:21px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--bg3);border-radius:21px;cursor:pointer;transition:0.3s}
+.toggle-slider:before{content:'';position:absolute;height:15px;width:15px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:0.3s}
+.toggle input:checked+.toggle-slider{background:var(--blue)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(17px)}
+
+/* Fullscreen wheel */
+.wheel-fullscreen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem}
+
+/* Number randomizer */
+.num-result{font-size:5rem;font-weight:700;text-align:center;background:linear-gradient(135deg,var(--blue),var(--indigo));-webkit-background-clip:text;-webkit-text-fill-color:transparent;transition:all 0.1s;min-height:120px;display:flex;align-items:center;justify-content:center}
+.num-spinning{animation:numSpin 0.1s infinite alternate}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes numSpin{from{transform:scale(0.95)}to{transform:scale(1.05)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+/* Progress */
+.progress-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:0.5rem}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:3px;transition:width 0.5s}
+
+/* Divider */
+.divider{border:none;border-top:1px solid var(--border);margin:1rem 0}
+
+/* Grid 2 col */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+
+/* QR */
+#qrcode canvas,#qrcode img{border-radius:8px}
+
+/* Range */
+input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;height:100%;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .hamburger{display:block}
+  .form-row,.grid-2,.grid-3{grid-template-columns:1fr}
+  .content{padding:1rem}
+  .groups-grid{grid-template-columns:1fr 1fr}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .groups-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr}
+}
+
+/* Page sections */
+.page{display:none}
+.page.active{display:block;animation:fadeIn 0.3s}
+
+/* Setting row */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-info h4{font-size:0.85rem;font-weight:500}
+.setting-info p{font-size:0.75rem;color:var(--text3);margin-top:2px}
+
+/* Overlay for sidebar on mobile */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
+.sidebar-overlay.show{display:block}
+
+/* wheel pointer */
+.wheel-pointer{font-size:2rem;line-height:1;position:relative;z-index:1;transform:rotate(90deg)}
+
+/* lock button */
+.lock-btn{background:none;border:none;cursor:pointer;font-size:0.9rem;padding:2px 4px;opacity:0.5;transition:all 0.2s;color:var(--text)}
+.lock-btn.locked{color:var(--amber);opacity:1}
+.lock-btn:hover{opacity:1}
+
+.glow-text{text-shadow:0 0 20px rgba(59,130,246,0.5)}
+.section-title{font-size:1.1rem;font-weight:600;margin-bottom:1rem;color:var(--text)}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="app">
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <h1>🎲 Group Randomizer</h1>
+    <p>ระบบจัดกลุ่มนักเรียน</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('upload')">
+      <span class="nav-icon">📤</span> อัปโหลดรายชื่อ
+    </div>
+    <div class="nav-item" onclick="showPage('generator')">
+      <span class="nav-icon">🎯</span> จัดกลุ่ม
+    </div>
+    <div class="nav-item" onclick="showPage('wheel')">
+      <span class="nav-icon">🎡</span> วงล้อสุ่ม
+    </div>
+    <div class="nav-item" onclick="showPage('number')">
+      <span class="nav-icon">🔢</span> สุ่มเลขที่
+    </div>
+    <div class="nav-item" onclick="showPage('export')">
+      <span class="nav-icon">💾</span> Export
+    </div>
+    <div class="nav-item" onclick="showPage('settings')">
+      <span class="nav-icon">⚙️</span> Settings
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div id="studentCountSidebar">นักเรียน: 0 คน</div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <h2 id="pageTitle">📊 Dashboard</h2>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-sm btn-secondary" onclick="loadSampleData()">📋 โหลดข้อมูลตัวอย่าง</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-num" id="statTotal">0</div>
+          <div class="stat-label">🧑‍🎓 นักเรียนทั้งหมด</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statGroups">0</div>
+          <div class="stat-label">👥 จำนวนกลุ่ม</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statMale">0</div>
+          <div class="stat-label">👦 นักเรียนชาย</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statFemale">0</div>
+          <div class="stat-label">👧 นักเรียนหญิง</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:1rem">
+        <div class="card">
+          <div class="card-title">📊 สัดส่วนชาย-หญิง</div>
+          <div class="donut-wrap">
+            <canvas id="donutChart" width="120" height="120"></canvas>
+            <div class="donut-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div><span id="maleLabel">ชาย: 0 คน (0%)</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div><span id="femaleLabel">หญิง: 0 คน (0%)</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚡ สมดุลของกลุ่ม</div>
+          <div id="balanceChart"><p style="color:var(--text3);font-size:0.82rem">ยังไม่ได้จัดกลุ่ม</p></div>
+          <div class="progress-bar" style="margin-top:1rem"><div class="progress-fill" id="balancePct" style="width:0%"></div></div>
+          <p style="font-size:0.75rem;color:var(--text2);margin-top:4px">ความสมดุล: <span id="balancePctText">0%</span></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📋 ระดับความสามารถ</div>
+        <div id="abilityChart"><p style="color:var(--text3);font-size:0.82rem">ไม่มีข้อมูล</p></div>
+      </div>
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="page" id="page-upload">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px">
+        <h3 class="section-title" style="margin:0">รายชื่อนักเรียน (<span id="studentCountUpload">0</span> คน)</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="addStudentModal()">➕ เพิ่มรายชื่อ</button>
+          <button class="btn btn-danger btn-sm" onclick="clearAllStudents()">🗑️ ล้างทั้งหมด</button>
+        </div>
+      </div>
+
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+        <div class="upload-icon">📂</div>
+        <p><strong>คลิกหรือลากไฟล์มาวางที่นี่</strong></p>
+        <p>รองรับ Excel (.xlsx) และ CSV (.csv)</p>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(event)">
+      </div>
+
+      <div style="margin-top:0.75rem;font-size:0.75rem;color:var(--text3);background:var(--glass);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.75rem">
+        💡 โครงสร้างไฟล์: <strong>เลขที่ | ชื่อ-สกุล | ห้อง | เพศ (ช/ญ) | ความสามารถ (สูง/กลาง/ต่ำ) | กลุ่มเดิม</strong>
+      </div>
+
+      <div style="margin-top:1rem">
+        <div class="table-wrap" id="studentTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>เลขที่</th><th>ชื่อ-สกุล</th><th>ห้อง</th><th>เพศ</th><th>ความสามารถ</th><th>กลุ่มเดิม</th><th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="studentTableBody">
+              <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">ยังไม่มีข้อมูลนักเรียน</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- GENERATOR -->
+    <div class="page" id="page-generator">
+      <div class="grid-2" style="margin-bottom:1rem;align-items:start">
+        <div class="card">
+          <div class="card-title">⚙️ ตั้งค่าการจัดกลุ่ม</div>
+          <div class="tabs">
+            <button class="tab active" onclick="setGroupTab(0,'groupNumTab')">จำนวนกลุ่ม</button>
+            <button class="tab" onclick="setGroupTab(1,'groupNumTab')">สมาชิกต่อกลุ่ม</button>
+          </div>
+          <div id="groupNumTab0">
+            <div class="form-group">
+              <label>จำนวนกลุ่ม</label>
+              <input type="number" id="numGroups" value="6" min="2" max="20">
+            </div>
+          </div>
+          <div id="groupNumTab1" style="display:none">
+            <div class="form-group">
+              <label>จำนวนสมาชิกต่อกลุ่ม</label>
+              <input type="number" id="numPerGroup" value="6" min="2" max="20">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>วิธีการสุ่ม</label>
+            <select id="shuffleMode">
+              <option value="random">สุ่มทั่วไป</option>
+              <option value="gender">สมดุลชาย-หญิง</option>
+              <option value="ability">คละความสามารถ</option>
+              <option value="norepeat">ไม่ซ้ำกลุ่มเดิม</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ตั้งชื่อกลุ่ม</label>
+            <select id="groupNameMode">
+              <option value="number">กลุ่มที่ 1, 2, 3...</option>
+              <option value="color">สีเขียว, แดง, น้ำเงิน...</option>
+              <option value="planet">ดาวศุกร์, ดาวอังคาร...</option>
+              <option value="fruit">แตงโม, มะม่วง, สับปะรด...</option>
+              <option value="animal">เสือ, สิงห์, มังกร...</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="generateGroups()" style="flex:1">🎲 สุ่มกลุ่ม</button>
+            <button class="btn btn-secondary" onclick="reshuffleUnlocked()">🔄 สุ่มใหม่</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📌 ตัวกรอง</div>
+          <div class="form-group">
+            <label>กรองตามห้อง</label>
+            <select id="filterRoom" onchange="renderStudentTable()">
+              <option value="">ทุกห้อง</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>กรองตามเพศ</label>
+            <select id="filterGender" onchange="renderStudentTable()">
+              <option value="">ทุกเพศ</option>
+              <option value="ช">ชาย</option>
+              <option value="ญ">หญิง</option>
+            </select>
+          </div>
+          <hr class="divider">
+          <div class="card-title" style="margin-bottom:0.5rem">🔒 ล็อกสมาชิก</div>
+          <p style="font-size:0.75rem;color:var(--text3);margin-bottom:0.75rem">กด 🔓 ที่สมาชิกในกลุ่มเพื่อล็อกไม่ให้สุ่มใหม่</p>
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="showLockedOnly"><span class="toggle-slider"></span></label>
+            <span>แสดงเฉพาะที่ล็อก</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="groupsOutput">
+        <div style="text-align:center;padding:3rem;color:var(--text3)">
+          <div style="font-size:3rem;margin-bottom:1rem">🎯</div>
+          <p>กดปุ่ม "สุ่มกลุ่ม" เพื่อเริ่มต้น</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHEEL -->
+    <div class="page" id="page-wheel">
+      <div class="grid-2" style="align-items:start">
+        <div class="card">
+          <div class="card-title">⚙️ ตั้งค่าวงล้อ</div>
+          <div class="form-group">
+            <label>สุ่มจาก</label>
+            <select id="wheelSource" onchange="updateWheelItems()">
+              <option value="students">รายชื่อนักเรียน</option>
+              <option value="groups">รายชื่อกลุ่ม</option>
+              <option value="leaders">หัวหน้ากลุ่ม</option>
+              <option value="custom">กำหนดเอง</option>
+            </select>
+          </div>
+          <div id="customItemsWrap" style="display:none">
+            <div class="form-group">
+              <label>รายการ (แต่ละบรรทัด = 1 รายการ)</label>
+              <textarea id="customItems" rows="5" style="resize:vertical"></textarea>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="applyCustomItems()">✅ ใช้รายการนี้</button>
+          </div>
+          <div class="form-group">
+            <label>จำนวนรายการในวงล้อ: <span id="wheelItemCount">0</span></label>
+          </div>
+          <div class="form-group">
+            <div class="toggle-wrap">
+              <label class="toggle"><input type="checkbox" id="removeAfterSpin"><span class="toggle-slider"></span></label>
+              <span>ลบออกหลังสุ่ม</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="spinWheel()" id="spinBtn" style="flex:1">🎡 หมุน!</button>
+            <button class="btn btn-secondary btn-icon" onclick="toggleFullscreen()" title="เต็มจอ">⛶</button>
+            <button class="btn btn-secondary btn-icon" onclick="resetWheel()" title="รีเซ็ต">🔄</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🎡 วงล้อสุ่ม</div>
+          <div class="wheel-wrap">
+            <div style="position:relative;display:flex;align-items:center;justify-content:center">
+              <canvas id="wheelCanvas" width="280" height="280"></canvas>
+              <div style="position:absolute;right:-10px;font-size:2rem;filter:drop-shadow(0 0 4px rgba(0,0,0,0.8))">◀</div>
+            </div>
+            <div class="wheel-result" id="wheelResult">
+              <div style="font-size:0.78rem;color:var(--text3);margin-bottom:4px">ผลการสุ่ม</div>
+              <div class="result-name" id="wheelResultName">—</div>
+            </div>
+            <div id="wheelHistory" style="width:100%;max-height:120px;overflow-y:auto">
+              <div style="font-size:0.75rem;color:var(--text3)">ประวัติ: <span id="wheelHistoryList">ยังไม่มี</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NUMBER RANDOMIZER -->
+    <div class="page" id="page-number">
+      <div class="card" style="max-width:500px;margin:0 auto">
+        <div class="card-title">🔢 สุ่มเลขที่นักเรียน</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>จากเลขที่</label>
+            <input type="number" id="numFrom" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label>ถึงเลขที่</label>
+            <input type="number" id="numTo" value="40" min="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="toggle-wrap">
+            <label class="toggle"><input type="checkbox" id="noRepeatNum"><span class="toggle-slider"></span></label>
+            <span>ไม่ซ้ำ (จนครบทุกเลข)</span>
+          </div>
+        </div>
+        <div class="num-result" id="numResult">?</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-top:1rem">
+          <button class="btn btn-primary" onclick="spinNumber()">🎲 สุ่มเลข</button>
+          <button class="btn btn-secondary" onclick="resetNumbers()">🔄 รีเซ็ต</button>
+        </div>
+        <div style="margin-top:1rem;font-size:0.78rem;color:var(--text3)">
+          เลขที่สุ่มแล้ว: <span id="usedNums">ยังไม่มี</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="page" id="page-export">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">💾 ส่งออกข้อมูล</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button class="btn btn-primary" onclick="exportPDF()">🖨️ Export PDF</button>
+            <button class="btn btn-success" onclick="exportExcel()">📊 Export Excel (.xlsx)</button>
+            <button class="btn btn-amber" onclick="exportPNG()">🖼️ Export PNG</button>
+            <button class="btn btn-secondary" onclick="exportCSV()">📄 Export CSV</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📱 แชร์ผ่าน QR Code</div>
+          <div style="margin-bottom:1rem">
+            <button class="btn btn-primary" onclick="generateQR()" style="width:100%">🔗 สร้าง QR Code</button>
+          </div>
+          <div id="qrcode" style="display:flex;justify-content:center"></div>
+          <p id="qrNote" style="font-size:0.75rem;color:var(--text3);text-align:center;margin-top:0.5rem"></p>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1rem">
+        <div class="card-title">👁️ ตัวอย่างผลกลุ่ม</div>
+        <div id="exportPreview">
+          <p style="color:var(--text3);font-size:0.82rem">ยังไม่ได้จัดกลุ่ม — กลับไปหน้า "จัดกลุ่ม" ก่อน</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="card" style="max-width:600px">
+        <div class="card-title">⚙️ การตั้งค่า</div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h4>บันทึกข้อมูลอัตโนมัติ</h4>
+            <p>บันทึกรายชื่อนักเรียนและกลุ่มลง Local Storage</p>
+          </div>
+          <label class="toggle"><input type="checkbox" id="autoSave" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h4>เสียงเอฟเฟกต์วงล้อ</h4>
+            <p>เล่นเสียงตอนหมุนวงล้อ</p>
+          </div>
+          <label class="toggle"><input type="checkbox" id="soundEnabled" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h4>Animation</h4>
+            <p>เปิด/ปิด animation ทั้งหมด</p>
+          </div>
+          <label class="toggle"><input type="checkbox" id="animEnabled" checked onchange="saveSettings()"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <h4>โหมด Active Learning</h4>
+            <p>แสดงชื่อกลุ่มแบบใหญ่บน projector</p>
+          </div>
+          <label class="toggle"><input type="checkbox" id="activeLearning" onchange="toggleActiveLearning()"><span class="toggle-slider"></span></label>
+        </div>
+        <hr class="divider">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="clearStorage()">🗑️ ล้างข้อมูลทั้งหมด</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadSampleData()">📋 โหลดข้อมูลตัวอย่าง</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="closeModal(event)">
+  <div class="modal" id="modalContent" onclick="event.stopPropagation()">
+    <div class="modal-title">
+      <span id="modalTitle">เพิ่ม/แก้ไขนักเรียน</span>
+      <button class="btn btn-secondary btn-icon btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Active Learning Overlay -->
+<div id="activeLearningOverlay" style="display:none;position:fixed;inset:0;background:#f0f4f8;z-index:600;overflow-y:auto;padding:2rem">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:1rem">
+    <button class="btn btn-secondary" onclick="document.getElementById('activeLearningOverlay').style.display='none'">✕ ปิด</button>
+  </div>
+  <div id="activeLearningContent" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ===== DATA =====
+let students = [];
+let groups = [];
+let lockedStudents = new Set();
+let wheelItems = [];
+let wheelHistoryArr = [];
+let usedNumbers = [];
+let isSpinning = false;
+let wheelAngle = 0;
+let groupTabIndex = 0;
+let settings = { autoSave: true, soundEnabled: true, animEnabled: true };
+
+// ===== GROUP NAMES =====
+const GROUP_NAMES = {
+  number: (i) => `กลุ่มที่ ${i+1}`,
+  color: ['เขียว','แดง','น้ำเงิน','เหลือง','ม่วง','ส้ม','ชมพู','ฟ้า','น้ำตาล','เทา'],
+  planet: ['ดาวศุกร์','ดาวอังคาร','ดาวพฤหัส','ดาวเสาร์','ดาวพุธ','ดาวยูเรนัส','ดาวเนปจูน','ดาวโลก'],
+  fruit: ['แตงโม','มะม่วง','สับปะรด','ส้ม','มะละกอ','ลิ้นจี่','ทุเรียน','กล้วย','มะพร้าว','ฝรั่ง'],
+  animal: ['เสือ','สิงห์','มังกร','นกอินทรี','ฉลาม','หมาป่า','หมี','อินทรีย์','เสือดาว','จระเข้']
+};
+const GROUP_COLORS = ['#3b82f6','#ec4899','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#84cc16','#f97316','#a855f7'];
+
+// ===== PARTICLES =====
+(function(){
+  const c = document.getElementById('particles');
+  const ctx = c.getContext('2d');
+  let pts = [];
+  function resize(){c.width=window.innerWidth;c.height=window.innerHeight}
+  resize();
+  window.addEventListener('resize',resize);
+  for(let i=0;i<60;i++) pts.push({x:Math.random()*c.width,y:Math.random()*c.height,r:Math.random()*2+0.5,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,a:Math.random()*0.4+0.1});
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    pts.forEach(p=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(37,99,235,${p.a*0.4})`;ctx.fill();
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0||p.x>c.width)p.vx*=-1;
+      if(p.y<0||p.y>c.height)p.vy*=-1;
+    });
+    // draw lines between close points
+    for(let i=0;i<pts.length;i++){
+      for(let j=i+1;j<pts.length;j++){
+        const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+        if(d<100){
+          ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+          ctx.strokeStyle=`rgba(37,99,235,${0.06*(1-d/100)})`;ctx.lineWidth=0.5;ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ===== NAVIGATION =====
+const pageTitles = {dashboard:'📊 Dashboard',upload:'📤 อัปโหลดรายชื่อ',generator:'🎯 จัดกลุ่ม',wheel:'🎡 วงล้อสุ่ม',number:'🔢 สุ่มเลขที่',export:'💾 Export',settings:'⚙️ Settings'};
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach((el,i)=>{
+    const pages=['dashboard','upload','generator','wheel','number','export','settings'];
+    el.classList.toggle('active', pages[i]===id);
+  });
+  document.getElementById('pageTitle').textContent = pageTitles[id]||id;
+  closeSidebar();
+  if(id==='dashboard') updateDashboard();
+  if(id==='wheel') { updateWheelItems(); drawWheel(); }
+  if(id==='export') renderExportPreview();
+  if(id==='upload') renderStudentTable();
+}
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+// ===== SAMPLE DATA =====
+function loadSampleData(){
+  const names = [
+    ['เด็กชาย สมชาย ใจดี','1/1','ช','สูง'],['เด็กหญิง สมหญิง รักเรียน','1/1','ญ','สูง'],
+    ['เด็กชาย ก้องภพ แสนดี','1/1','ช','กลาง'],['เด็กหญิง พิมพ์ใจ สุขใส','1/1','ญ','กลาง'],
+    ['เด็กชาย ธนากร มีสุข','1/1','ช','ต่ำ'],['เด็กหญิง นภาพร ฟ้าใส','1/1','ญ','สูง'],
+    ['เด็กชาย วีรภัทร เก่งกล้า','1/1','ช','กลาง'],['เด็กหญิง อรนุช หวานใจ','1/1','ญ','กลาง'],
+    ['เด็กชาย ภูมิใจ ไทยแลนด์','1/1','ช','สูง'],['เด็กหญิง กัญญา สาวน้อย','1/1','ญ','ต่ำ'],
+    ['เด็กชาย ชนินทร์ ผลดี','1/2','ช','กลาง'],['เด็กหญิง ปาริชาต บุปผา','1/2','ญ','สูง'],
+    ['เด็กชาย ศักดิ์ชัย มั่นคง','1/2','ช','ต่ำ'],['เด็กหญิง ลักษมี งามพร้อม','1/2','ญ','กลาง'],
+    ['เด็กชาย พงศ์พล ยิ้มดี','1/2','ช','สูง'],['เด็กหญิง จันทิมา ศรีสุข','1/2','ญ','กลาง'],
+    ['เด็กชาย เอกลักษณ์ ไทยดี','1/2','ช','กลาง'],['เด็กหญิง ชุติมา ดวงดี','1/2','ญ','ต่ำ'],
+    ['เด็กชาย ณัฐวุฒิ ฉลาดเลิศ','1/2','ช','สูง'],['เด็กหญิง ปิ่นมนัส รุ่งเรือง','1/2','ญ','กลาง'],
+    ['เด็กชาย ภาณุวัฒน์ ดีงาม','1/3','ช','ต่ำ'],['เด็กหญิง สุพัตรา ใจงาม','1/3','ญ','สูง'],
+    ['เด็กชาย อานนท์ ก้าวหน้า','1/3','ช','กลาง'],['เด็กหญิง นิภา แสงทอง','1/3','ญ','กลาง'],
+    ['เด็กชาย ประสิทธิ์ เรียนดี','1/3','ช','สูง'],['เด็กหญิง เบญจมาศ สุขสันต์','1/3','ญ','ต่ำ'],
+    ['เด็กชาย วรวุฒิ มีความ','1/3','ช','กลาง'],['เด็กหญิง ชลธิชา สายน้ำ','1/3','ญ','สูง'],
+    ['เด็กชาย ทวีชัย เจริญดี','1/3','ช','กลาง'],['เด็กหญิง พรรณิภา ดอกไม้','1/3','ญ','กลาง'],
+    ['เด็กชาย สราวุธ ยั่งยืน','1/4','ช','ต่ำ'],['เด็กหญิง มาลินี ใสสะอาด','1/4','ญ','สูง'],
+    ['เด็กชาย ปิยะ สุขใจ','1/4','ช','กลาง'],['เด็กหญิง ธนัชพร มีทอง','1/4','ญ','กลาง'],
+    ['เด็กชาย วิทยา เก่งมาก','1/4','ช','สูง'],['เด็กหญิง รัตนาภรณ์ ดีจริง','1/4','ญ','ต่ำ'],
+    ['เด็กชาย ชูเกียรติ ยอดเยี่ยม','1/4','ช','กลาง'],['เด็กหญิง กมลชนก น่ารัก','1/4','ญ','สูง'],
+    ['เด็กชาย ธีรภัทร ก้าวไกล','1/4','ช','สูง'],['เด็กหญิง อภิชญา สาวสวย','1/4','ญ','กลาง'],
+  ];
+  students = names.map((n,i)=>({id:i+1, num:i+1, name:n[0], room:n[1], gender:n[2], ability:n[3], prevGroup:''}));
+  saveData();
+  renderStudentTable();
+  updateDashboard();
+  updateFilterRoom();
+  showToast('โหลดข้อมูลตัวอย่าง 40 คน เรียบร้อย!','success');
+}
+
+// ===== STUDENT TABLE =====
+function renderStudentTable(){
+  const tbody = document.getElementById('studentTableBody');
+  const roomFilter = document.getElementById('filterRoom')?.value||'';
+  const genderFilter = document.getElementById('filterGender')?.value||'';
+  let list = students.filter(s=>(roomFilter===''||s.room===roomFilter)&&(genderFilter===''||s.gender===genderFilter));
+  document.getElementById('studentCountUpload').textContent = students.length;
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">ไม่มีข้อมูลนักเรียน</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map((s,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${s.num}</td>
+      <td>${s.name}</td>
+      <td>${s.room}</td>
+      <td><span class="badge badge-${s.gender==='ช'?'m':'f'}">${s.gender==='ช'?'ชาย':'หญิง'}</span></td>
+      <td><span class="badge badge-${s.ability==='สูง'?'high':s.ability==='กลาง'?'mid':'low'}">${s.ability||'-'}</span></td>
+      <td>${s.prevGroup||'-'}</td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="editStudent(${s.id})">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${s.id})" style="margin-left:4px">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+  document.getElementById('studentCountSidebar').textContent = `นักเรียน: ${students.length} คน`;
+}
+
+function updateFilterRoom(){
+  const sel = document.getElementById('filterRoom');
+  if(!sel) return;
+  const rooms = [...new Set(students.map(s=>s.room))].sort();
+  sel.innerHTML = '<option value="">ทุกห้อง</option>' + rooms.map(r=>`<option value="${r}">${r}</option>`).join('');
+}
+
+// ===== ADD/EDIT STUDENT =====
+function addStudentModal(student=null){
+  const isEdit = !!student;
+  document.getElementById('modalTitle').textContent = isEdit ? '✏️ แก้ไขนักเรียน' : '➕ เพิ่มนักเรียน';
+  document.getElementById('modalBody').innerHTML = `
+    <div class="form-row">
+      <div class="form-group">
+        <label>เลขที่</label>
+        <input type="number" id="m_num" value="${isEdit?student.num:students.length+1}" min="1">
+      </div>
+      <div class="form-group">
+        <label>ห้อง</label>
+        <input type="text" id="m_room" value="${isEdit?student.room:'1/1'}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>ชื่อ-สกุล</label>
+      <input type="text" id="m_name" value="${isEdit?student.name:''}" placeholder="เช่น เด็กชาย สมชาย ใจดี">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>เพศ</label>
+        <select id="m_gender">
+          <option value="ช" ${isEdit&&student.gender==='ช'?'selected':''}>ชาย (ช)</option>
+          <option value="ญ" ${isEdit&&student.gender==='ญ'?'selected':''}>หญิง (ญ)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ความสามารถ</label>
+        <select id="m_ability">
+          <option value="สูง" ${isEdit&&student.ability==='สูง'?'selected':''}>สูง</option>
+          <option value="กลาง" ${isEdit&&(student.ability==='กลาง'||!student.ability)?'selected':''}>กลาง</option>
+          <option value="ต่ำ" ${isEdit&&student.ability==='ต่ำ'?'selected':''}>ต่ำ</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>กลุ่มเดิม (ถ้ามี)</label>
+      <input type="text" id="m_prevGroup" value="${isEdit?student.prevGroup||'':''}" placeholder="เช่น กลุ่มที่ 1">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem">
+      <button class="btn btn-secondary" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-primary" onclick="${isEdit?`saveEditStudent(${student.id})`:'saveNewStudent()'}">${isEdit?'💾 บันทึก':'➕ เพิ่ม'}</button>
+    </div>
+  `;
+  document.getElementById('modalOverlay').style.display='flex';
+}
+
+function saveNewStudent(){
+  const s = {
+    id: Date.now(), num: +document.getElementById('m_num').value,
+    name: document.getElementById('m_name').value.trim(),
+    room: document.getElementById('m_room').value.trim(),
+    gender: document.getElementById('m_gender').value,
+    ability: document.getElementById('m_ability').value,
+    prevGroup: document.getElementById('m_prevGroup').value.trim()
+  };
+  if(!s.name){showToast('กรุณาระบุชื่อ','error');return;}
+  students.push(s);
+  saveData();renderStudentTable();updateDashboard();updateFilterRoom();closeModal();
+  showToast('เพิ่มนักเรียนเรียบร้อย','success');
+}
+
+function saveEditStudent(id){
+  const s = students.find(x=>x.id===id);
+  if(!s) return;
+  s.num=+document.getElementById('m_num').value;
+  s.name=document.getElementById('m_name').value.trim();
+  s.room=document.getElementById('m_room').value.trim();
+  s.gender=document.getElementById('m_gender').value;
+  s.ability=document.getElementById('m_ability').value;
+  s.prevGroup=document.getElementById('m_prevGroup').value.trim();
+  saveData();renderStudentTable();updateDashboard();closeModal();
+  showToast('แก้ไขเรียบร้อย','success');
+}
+
+function editStudent(id){ addStudentModal(students.find(s=>s.id===id)); }
+
+function deleteStudent(id){
+  students=students.filter(s=>s.id!==id);
+  saveData();renderStudentTable();updateDashboard();
+  showToast('ลบนักเรียนเรียบร้อย','info');
+}
+
+function clearAllStudents(){
+  if(!confirm('ลบรายชื่อนักเรียนทั้งหมด?')) return;
+  students=[];groups=[];saveData();renderStudentTable();updateDashboard();
+  showToast('ล้างข้อมูลทั้งหมดแล้ว','info');
+}
+
+// ===== FILE UPLOAD =====
+function handleDragOver(e){e.preventDefault();document.getElementById('uploadZone').classList.add('dragover')}
+function handleDragLeave(){document.getElementById('uploadZone').classList.remove('dragover')}
+function handleDrop(e){e.preventDefault();handleDragLeave();const f=e.dataTransfer.files[0];if(f)processFile(f);}
+function handleFile(e){const f=e.target.files[0];if(f)processFile(f);}
+
+function processFile(file){
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){
+    const reader = new FileReader();
+    reader.onload=e=>parseCSV(e.target.result);
+    reader.readAsText(file,'UTF-8');
+  } else if(ext==='xlsx'||ext==='xls'){
+    const reader = new FileReader();
+    reader.onload=e=>{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const data=XLSX.utils.sheet_to_json(ws,{header:1});
+      parseRows(data);
+    };
+    reader.readAsBinaryString(file);
+  } else {
+    showToast('รองรับเฉพาะ .xlsx และ .csv','error');
+  }
+}
+
+function parseCSV(text){
+  const lines=text.split('\n').map(l=>l.split(',').map(c=>c.trim().replace(/^"|"$/g,'')));
+  parseRows(lines);
+}
+
+function parseRows(rows){
+  const start = rows[0]&&isNaN(rows[0][0]) ? 1 : 0;
+  const imported = [];
+  for(let i=start;i<rows.length;i++){
+    const r=rows[i];
+    if(!r||!r[1]) continue;
+    imported.push({id:Date.now()+i,num:+r[0]||i,name:r[1]||'',room:r[2]||'',gender:r[3]||'ช',ability:r[4]||'กลาง',prevGroup:r[5]||''});
+  }
+  students=[...students,...imported];
+  saveData();renderStudentTable();updateDashboard();updateFilterRoom();
+  showToast(`นำเข้าสำเร็จ ${imported.length} คน`,'success');
+}
+
+// ===== GROUP GENERATOR =====
+function setGroupTab(idx,prefix){
+  groupTabIndex=idx;
+  document.querySelectorAll('.tabs .tab').forEach((t,i)=>{
+    if(t.closest('#page-generator')) t.classList.toggle('active',i===idx);
+  });
+  document.getElementById(prefix+'0').style.display=idx===0?'block':'none';
+  document.getElementById(prefix+'1').style.display=idx===1?'block':'none';
+}
+
+function getGroupCount(){
+  if(groupTabIndex===0) return Math.max(2,+document.getElementById('numGroups').value||6);
+  const perGroup=Math.max(2,+document.getElementById('numPerGroup').value||6);
+  return Math.max(2,Math.ceil(students.length/perGroup));
+}
+
+function getGroupName(i){
+  const mode=document.getElementById('groupNameMode').value;
+  if(mode==='number') return GROUP_NAMES.number(i);
+  const arr=GROUP_NAMES[mode];
+  return arr[i%arr.length];
+}
+
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-0.5); }
+
+function generateGroups(){
+  if(students.length<2){showToast('ต้องมีนักเรียนอย่างน้อย 2 คน','error');return;}
+  const n=getGroupCount();
+  const mode=document.getElementById('shuffleMode').value;
+  let pool=students.filter(s=>!lockedStudents.has(s.id));
+  // build initial groups
+  groups=Array.from({length:n},(_,i)=>({name:getGroupName(i),color:GROUP_COLORS[i%GROUP_COLORS.length],members:[]}));
+
+  if(mode==='gender'){
+    const males=shuffle(pool.filter(s=>s.gender==='ช'));
+    const females=shuffle(pool.filter(s=>s.gender==='ญ'));
+    let gi=0;
+    males.forEach(s=>{groups[gi%n].members.push(s);gi++;});
+    gi=0;females.forEach(s=>{groups[gi%n].members.push(s);gi++;});
+  } else if(mode==='ability'){
+    const high=shuffle(pool.filter(s=>s.ability==='สูง'));
+    const mid=shuffle(pool.filter(s=>s.ability==='กลาง'));
+    const low=shuffle(pool.filter(s=>s.ability==='ต่ำ'));
+    let gi=0;
+    [...high,...mid,...low].forEach(s=>{groups[gi%n].members.push(s);gi++;});
+  } else if(mode==='norepeat'){
+    const shuffled=shuffle(pool);
+    shuffled.sort((a,b)=>{
+      const ag=a.prevGroup||'';const bg=b.prevGroup||'';
+      if(ag===bg) return 0;return ag<bg?-1:1;
+    });
+    let gi=0;shuffled.forEach(s=>{groups[gi%n].members.push(s);gi++;});
+  } else {
+    const shuffled=shuffle(pool);
+    let gi=0;shuffled.forEach(s=>{groups[gi%n].members.push(s);gi++;});
+  }
+
+  // Add locked students back to their previous group or group 0
+  lockedStudents.forEach(id=>{
+    const s=students.find(x=>x.id===id);
+    if(!s) return;
+    const prev=groups.findIndex(g=>g.members.some(m=>m.id===id));
+    if(prev===-1) groups[0].members.push(s);
+  });
+
+  saveData();
+  renderGroups();
+  updateDashboard();
+  showToast(`จัดกลุ่มสำเร็จ ${n} กลุ่ม`,'success');
+}
+
+function reshuffleUnlocked(){
+  if(!groups.length){generateGroups();return;}
+  const n=groups.length;
+  let pool=students.filter(s=>!lockedStudents.has(s.id));
+  const mode=document.getElementById('shuffleMode').value;
+  groups.forEach(g=>g.members=g.members.filter(m=>lockedStudents.has(m.id)));
+  const shuffled = mode==='gender'
+    ? [...shuffle(pool.filter(s=>s.gender==='ช')),...shuffle(pool.filter(s=>s.gender==='ญ'))]
+    : shuffle(pool);
+  let gi=0;shuffled.forEach(s=>{
+    const smallest=groups.reduce((a,b)=>a.members.length<=b.members.length?a:b);
+    smallest.members.push(s);gi++;
+  });
+  saveData();renderGroups();
+  showToast('สุ่มใหม่เรียบร้อย','success');
+}
+
+function renderGroups(){
+  const out=document.getElementById('groupsOutput');
+  if(!groups.length){out.innerHTML='<div style="text-align:center;padding:3rem;color:var(--text3)"><div style="font-size:3rem">🎯</div><p>กดปุ่ม "สุ่มกลุ่ม" เพื่อเริ่มต้น</p></div>';return;}
+  out.innerHTML='<div class="groups-grid">'+groups.map((g,gi)=>`
+    <div class="group-card" id="gc_${gi}" ondragover="onGroupDragOver(event,${gi})" ondrop="onGroupDrop(event,${gi})" ondragleave="onGroupDragLeave(${gi})">
+      <div class="group-header" style="background:${g.color}22;border-bottom:1px solid ${g.color}44">
+        <span class="group-name" style="color:${g.color}">${g.name}</span>
+        <span class="group-count" style="background:${g.color}33;color:${g.color}">${g.members.length} คน</span>
+      </div>
+      <div class="group-body">
+        ${g.members.map((m,mi)=>`
+          <div class="member-item" draggable="true" id="mi_${g.name}_${mi}"
+            ondragstart="onMemberDragStart(event,${gi},${mi})"
+            ondragend="onMemberDragEnd(event)">
+            <div class="member-avatar" style="background:${m.gender==='ช'?'rgba(59,130,246,0.2)':'rgba(236,72,153,0.2)'};color:${m.gender==='ช'?'#60a5fa':'#f472b6'}">${m.gender==='ช'?'👦':'👧'}</div>
+            <span style="flex:1;font-size:0.78rem">${m.name}</span>
+            <button class="lock-btn ${lockedStudents.has(m.id)?'locked':''}" onclick="toggleLock(${m.id})" title="${lockedStudents.has(m.id)?'ปลดล็อก':'ล็อก'}">
+              ${lockedStudents.has(m.id)?'🔒':'🔓'}
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')+'</div>';
+}
+
+let dragFrom = null;
+function onMemberDragStart(e,gi,mi){
+  dragFrom={gi,mi};
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{const el=e.target.closest('.member-item');if(el)el.classList.add('dragging');},0);
+}
+function onMemberDragEnd(e){
+  document.querySelectorAll('.member-item').forEach(el=>el.classList.remove('dragging'));
+  dragFrom=null;
+}
+function onGroupDragOver(e,gi){e.preventDefault();document.getElementById('gc_'+gi)?.classList.add('drag-over');}
+function onGroupDragLeave(gi){document.getElementById('gc_'+gi)?.classList.remove('drag-over');}
+function onGroupDrop(e,gi){
+  e.preventDefault();
+  document.getElementById('gc_'+gi)?.classList.remove('drag-over');
+  if(!dragFrom||dragFrom.gi===gi) return;
+  const member=groups[dragFrom.gi].members.splice(dragFrom.mi,1)[0];
+  groups[gi].members.push(member);
+  dragFrom=null;
+  saveData();renderGroups();
+}
+
+function toggleLock(id){
+  if(lockedStudents.has(id)) lockedStudents.delete(id);
+  else lockedStudents.add(id);
+  renderGroups();
+}
+
+// ===== WHEEL =====
+let wheelItemsAll = [];
+function updateWheelItems(){
+  const src=document.getElementById('wheelSource').value;
+  document.getElementById('customItemsWrap').style.display=src==='custom'?'block':'none';
+  if(src==='students') wheelItemsAll=students.map(s=>s.name);
+  else if(src==='groups') wheelItemsAll=groups.map(g=>g.name);
+  else if(src==='leaders') wheelItemsAll=groups.map(g=>g.members[0]?.name||'').filter(Boolean);
+  else return;
+  wheelItems=[...wheelItemsAll];
+  document.getElementById('wheelItemCount').textContent=wheelItems.length;
+  drawWheel();
+}
+
+function applyCustomItems(){
+  const raw=document.getElementById('customItems').value;
+  wheelItemsAll=raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  wheelItems=[...wheelItemsAll];
+  document.getElementById('wheelItemCount').textContent=wheelItems.length;
+  drawWheel();showToast('อัพเดตรายการแล้ว','success');
+}
+
+function drawWheel(angle=wheelAngle){
+  const canvas=document.getElementById('wheelCanvas');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=cx-8;
+  ctx.clearRect(0,0,W,H);
+  if(!wheelItems.length){
+    ctx.fillStyle='#e2e8f0';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#94a3b8';ctx.font='14px Kanit';ctx.textAlign='center';ctx.fillText('ไม่มีรายการ',cx,cy);
+    return;
+  }
+  const n=wheelItems.length;
+  const arc=2*Math.PI/n;
+  const colors=['#3b82f6','#ec4899','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#84cc16','#f97316','#a855f7'];
+  wheelItems.forEach((item,i)=>{
+    const start=angle+i*arc,end=start+arc;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,end);ctx.closePath();
+    ctx.fillStyle=colors[i%colors.length];ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1.5;ctx.stroke();
+    // text
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(start+arc/2);
+    ctx.textAlign='right';ctx.fillStyle='#fff';
+    const fontSize=Math.max(9,Math.min(14,Math.floor(200/n)));
+    ctx.font=`${fontSize}px Kanit`;
+    const label=item.length>10?item.slice(0,10)+'…':item;
+    ctx.fillText(label,r-10,fontSize/3);
+    ctx.restore();
+  });
+  // Center circle
+  ctx.beginPath();ctx.arc(cx,cy,28,0,Math.PI*2);
+  ctx.fillStyle='#ffffff';ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#1e293b';ctx.font='bold 16px Kanit';ctx.textAlign='center';ctx.fillText('🎲',cx,cy+6);
+}
+
+let spinRAF=null;
+function spinWheel(){
+  if(isSpinning||!wheelItems.length){
+    if(!wheelItems.length) showToast('ไม่มีรายการในวงล้อ','error');
+    return;
+  }
+  isSpinning=true;
+  document.getElementById('spinBtn').disabled=true;
+  playTick();
+  const totalRotation=Math.PI*2*(8+Math.random()*6);
+  const duration=4000+Math.random()*2000;
+  const start=performance.now();
+  const startAngle=wheelAngle;
+  function animate(now){
+    const elapsed=now-start;
+    const t=Math.min(elapsed/duration,1);
+    const ease=1-Math.pow(1-t,4);
+    wheelAngle=startAngle+totalRotation*ease;
+    drawWheel(wheelAngle);
+    if(t<1){spinRAF=requestAnimationFrame(animate);}
+    else{
+      isSpinning=false;
+      document.getElementById('spinBtn').disabled=false;
+      const n=wheelItems.length;
+      const arc=2*Math.PI/n;
+      // Pointer is at right side (angle 0 = right), adjusted
+      const normalizedAngle=((wheelAngle%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+      const idx=Math.floor(n-(normalizedAngle/arc)%n)%n;
+      const winner=wheelItems[idx];
+      document.getElementById('wheelResultName').textContent=winner;
+      document.getElementById('wheelResult').style.borderColor='var(--blue)';
+      wheelHistoryArr.unshift(winner);
+      if(wheelHistoryArr.length>10) wheelHistoryArr.pop();
+      document.getElementById('wheelHistoryList').textContent=wheelHistoryArr.join(' → ');
+      playWin();
+      if(document.getElementById('removeAfterSpin').checked){
+        wheelItems.splice(idx,1);
+        document.getElementById('wheelItemCount').textContent=wheelItems.length;
+        drawWheel(wheelAngle);
+      }
+    }
+  }
+  spinRAF=requestAnimationFrame(animate);
+}
+
+function resetWheel(){
+  wheelItems=[...wheelItemsAll];
+  wheelAngle=0;
+  wheelHistoryArr=[];
+  document.getElementById('wheelResultName').textContent='—';
+  document.getElementById('wheelHistoryList').textContent='ยังไม่มี';
+  document.getElementById('wheelItemCount').textContent=wheelItems.length;
+  document.getElementById('wheelResult').style.borderColor='var(--border)';
+  drawWheel();
+  showToast('รีเซ็ตวงล้อแล้ว','info');
+}
+
+// ===== SOUND =====
+let audioCtx=null;
+function getAudioCtx(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+function playTick(){
+  if(!document.getElementById('soundEnabled')?.checked) return;
+  try{
+    const ctx=getAudioCtx();
+    const osc=ctx.createOscillator();const g=ctx.createGain();
+    osc.connect(g);g.connect(ctx.destination);
+    osc.frequency.setValueAtTime(800,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200,ctx.currentTime+0.1);
+    g.gain.setValueAtTime(0.1,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.1);
+    osc.start();osc.stop(ctx.currentTime+0.1);
+  }catch(e){}
+}
+function playWin(){
+  if(!document.getElementById('soundEnabled')?.checked) return;
+  try{
+    const ctx=getAudioCtx();
+    [523,659,784,1047].forEach((f,i)=>{
+      const osc=ctx.createOscillator();const g=ctx.createGain();
+      osc.connect(g);g.connect(ctx.destination);
+      osc.frequency.value=f;g.gain.setValueAtTime(0.15,ctx.currentTime+i*0.12);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.12+0.25);
+      osc.start(ctx.currentTime+i*0.12);osc.stop(ctx.currentTime+i*0.12+0.3);
+    });
+  }catch(e){}
+}
+
+// ===== FULLSCREEN WHEEL =====
+function toggleFullscreen(){
+  const ex=document.getElementById('wheelFullscreenMode');
+  if(ex){ex.remove();return;}
+  const div=document.createElement('div');
+  div.id='wheelFullscreenMode';div.className='wheel-fullscreen';
+  const size=Math.min(window.innerWidth,window.innerHeight)-100;
+  div.innerHTML=`
+    <button onclick="this.parentElement.remove();drawWheel()" style="position:absolute;top:1rem;right:1rem" class="btn btn-secondary">✕ ปิด</button>
+    <canvas id="wheelCanvasFull" width="${size}" height="${size}" style="border-radius:50%;cursor:pointer"></canvas>
+    <div style="text-align:center">
+      <div id="wheelResultFull" style="font-size:2rem;font-weight:700;color:var(--blue);margin:1rem 0">—</div>
+      <button class="btn btn-primary" onclick="spinWheelFull()" id="spinBtnFull">🎡 หมุน!</button>
+    </div>
+  `;
+  document.body.appendChild(div);
+  drawWheelFull(wheelAngle);
+}
+function drawWheelFull(angle){
+  const canvas=document.getElementById('wheelCanvasFull');
+  if(!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=cx-10;
+  ctx.clearRect(0,0,W,H);
+  if(!wheelItems.length) return;
+  const n=wheelItems.length;const arc=2*Math.PI/n;
+  const colors=['#3b82f6','#ec4899','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#84cc16','#f97316','#a855f7'];
+  wheelItems.forEach((item,i)=>{
+    const s=angle+i*arc,e=s+arc;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,s,e);ctx.closePath();
+    ctx.fillStyle=colors[i%colors.length];ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=2;ctx.stroke();
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(s+arc/2);
+    ctx.textAlign='right';ctx.fillStyle='#fff';
+    const fs=Math.max(12,Math.min(22,Math.floor(300/n)));
+    ctx.font=`${fs}px Kanit`;
+    ctx.fillText(item.length>14?item.slice(0,14)+'…':item,r-16,fs/3);
+    ctx.restore();
+  });
+  ctx.beginPath();ctx.arc(cx,cy,40,0,Math.PI*2);
+  ctx.fillStyle='#ffffff';ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#1e293b';ctx.font='bold 24px Kanit';ctx.textAlign='center';ctx.fillText('🎲',cx,cy+8);
+}
+let spinningFull=false;
+function spinWheelFull(){
+  if(spinningFull||!wheelItems.length) return;
+  spinningFull=true;
+  document.getElementById('spinBtnFull').disabled=true;
+  playTick();
+  const total=Math.PI*2*(8+Math.random()*6);
+  const dur=4000+Math.random()*2000;
+  const t0=performance.now();
+  const a0=wheelAngle;
+  function anim(now){
+    const el=now-t0,t=Math.min(el/dur,1),ease=1-Math.pow(1-t,4);
+    wheelAngle=a0+total*ease;
+    drawWheelFull(wheelAngle);drawWheel(wheelAngle);
+    if(t<1){requestAnimationFrame(anim);}
+    else{
+      spinningFull=false;document.getElementById('spinBtnFull').disabled=false;
+      const n=wheelItems.length,arc=2*Math.PI/n;
+      const na=((wheelAngle%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+      const idx=Math.floor(n-(na/arc)%n)%n;
+      const winner=wheelItems[idx];
+      document.getElementById('wheelResultFull').textContent=winner;
+      document.getElementById('wheelResultName').textContent=winner;
+      wheelHistoryArr.unshift(winner);
+      if(wheelHistoryArr.length>10)wheelHistoryArr.pop();
+      document.getElementById('wheelHistoryList').textContent=wheelHistoryArr.join(' → ');
+      playWin();
+      if(document.getElementById('removeAfterSpin').checked){
+        wheelItems.splice(idx,1);
+        document.getElementById('wheelItemCount').textContent=wheelItems.length;
+      }
+    }
+  }
+  requestAnimationFrame(anim);
+}
+
+// ===== NUMBER RANDOMIZER =====
+let numSpinInterval=null;
+function spinNumber(){
+  const from=+document.getElementById('numFrom').value||1;
+  const to=+document.getElementById('numTo').value||40;
+  const noRepeat=document.getElementById('noRepeatNum').checked;
+  let pool=[];
+  for(let i=from;i<=to;i++) pool.push(i);
+  if(noRepeat){ pool=pool.filter(n=>!usedNumbers.includes(n)); if(!pool.length){showToast('สุ่มครบทุกเลขแล้ว','info');return;} }
+  clearInterval(numSpinInterval);
+  let count=0;const maxCount=20;
+  numSpinInterval=setInterval(()=>{
+    const r=pool[Math.floor(Math.random()*pool.length)];
+    document.getElementById('numResult').textContent=r;
+    document.getElementById('numResult').classList.add('num-spinning');
+    count++;
+    if(count>=maxCount){
+      clearInterval(numSpinInterval);
+      const final=pool[Math.floor(Math.random()*pool.length)];
+      document.getElementById('numResult').textContent=final;
+      document.getElementById('numResult').classList.remove('num-spinning');
+      if(noRepeat){ usedNumbers.push(final); document.getElementById('usedNums').textContent=usedNumbers.join(', '); }
+      playWin();
+    }
+  },60);
+}
+function resetNumbers(){ usedNumbers=[]; document.getElementById('numResult').textContent='?'; document.getElementById('usedNums').textContent='ยังไม่มี'; showToast('รีเซ็ตแล้ว','info'); }
+
+// ===== DASHBOARD =====
+function updateDashboard(){
+  const total=students.length;
+  const male=students.filter(s=>s.gender==='ช').length;
+  const female=students.filter(s=>s.gender==='ญ').length;
+  document.getElementById('statTotal').textContent=total;
+  document.getElementById('statGroups').textContent=groups.length;
+  document.getElementById('statMale').textContent=male;
+  document.getElementById('statFemale').textContent=female;
+  document.getElementById('studentCountSidebar').textContent=`นักเรียน: ${total} คน`;
+  drawDonut(male,female);
+  updateAbilityChart();
+  updateBalanceChart();
+}
+
+function drawDonut(male,female){
+  const c=document.getElementById('donutChart');if(!c) return;
+  const ctx=c.getContext('2d');
+  const total=male+female;
+  const cx=60,cy=60,r=50,ir=30;
+  ctx.clearRect(0,0,120,120);
+  if(!total){ctx.fillStyle='#e2e8f0';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(cx,cy,ir,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();return;}
+  const mRatio=male/total;
+  const mAngle=mRatio*2*Math.PI;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+mAngle);ctx.closePath();ctx.fillStyle='#3b82f6';ctx.fill();
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,-Math.PI/2+mAngle,-Math.PI/2+2*Math.PI);ctx.closePath();ctx.fillStyle='#ec4899';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,ir,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
+  ctx.fillStyle='#1e293b';ctx.font='bold 12px Kanit';ctx.textAlign='center';ctx.fillText(total,cx,cy+4);
+  document.getElementById('maleLabel').textContent=`ชาย: ${male} คน (${total?Math.round(male/total*100):0}%)`;
+  document.getElementById('femaleLabel').textContent=`หญิง: ${female} คน (${total?Math.round(female/total*100):0}%)`;
+}
+
+function updateAbilityChart(){
+  const el=document.getElementById('abilityChart');
+  if(!students.length){el.innerHTML='<p style="color:var(--text3);font-size:0.82rem">ไม่มีข้อมูล</p>';return;}
+  const h=students.filter(s=>s.ability==='สูง').length;
+  const m=students.filter(s=>s.ability==='กลาง').length;
+  const l=students.filter(s=>s.ability==='ต่ำ').length;
+  const total=students.length;
+  el.innerHTML=[['สูง',h,'#10b981'],['กลาง',m,'#f59e0b'],['ต่ำ',l,'#ef4444']].map(([label,n,color])=>`
+    <div class="chart-bar">
+      <span class="chart-label">${label}</span>
+      <div class="chart-track">
+        <div class="chart-fill" style="width:${total?Math.round(n/total*100):0}%;background:${color}">${n} คน</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateBalanceChart(){
+  const el=document.getElementById('balanceChart');
+  if(!groups.length){el.innerHTML='<p style="color:var(--text3);font-size:0.82rem">ยังไม่ได้จัดกลุ่ม</p>';document.getElementById('balancePct').style.width='0%';document.getElementById('balancePctText').textContent='0%';return;}
+  const sizes=groups.map(g=>g.members.length);
+  const avg=sizes.reduce((a,b)=>a+b,0)/sizes.length;
+  const variance=sizes.reduce((s,v)=>s+Math.pow(v-avg,2),0)/sizes.length;
+  const balance=Math.max(0,Math.round(100-variance*10));
+  const max=Math.max(...sizes);
+  el.innerHTML=groups.map((g,i)=>`
+    <div class="chart-bar">
+      <span class="chart-label" style="color:${g.color};font-size:0.7rem;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${g.name}</span>
+      <div class="chart-track">
+        <div class="chart-fill" style="width:${max?Math.round(g.members.length/max*100):0}%;background:${g.color}">${g.members.length}</div>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('balancePct').style.width=balance+'%';
+  document.getElementById('balancePctText').textContent=balance+'%';
+}
+
+// ===== EXPORT =====
+function renderExportPreview(){
+  const el=document.getElementById('exportPreview');
+  if(!groups.length){el.innerHTML='<p style="color:var(--text3);font-size:0.82rem">ยังไม่ได้จัดกลุ่ม</p>';return;}
+  el.innerHTML='<div class="groups-grid">'+groups.map(g=>`
+    <div style="background:${g.color}11;border:1px solid ${g.color}44;border-radius:var(--radius);padding:0.75rem">
+      <div style="font-weight:600;color:${g.color};margin-bottom:0.5rem">${g.name} (${g.members.length} คน)</div>
+      ${g.members.map(m=>`<div style="font-size:0.78rem;padding:2px 0">${m.num}. ${m.name}</div>`).join('')}
+    </div>
+  `).join('')+'</div>';
+}
+
+function exportExcel(){
+  if(!groups.length){showToast('ยังไม่ได้จัดกลุ่ม','error');return;}
+  const rows=[['กลุ่ม','ชื่อกลุ่ม','เลขที่','ชื่อ-สกุล','ห้อง','เพศ','ความสามารถ']];
+  groups.forEach((g,gi)=>{
+    g.members.forEach(m=>{
+      rows.push([gi+1,g.name,m.num,m.name,m.room,m.gender==='ช'?'ชาย':'หญิง',m.ability]);
+    });
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb,ws,'Groups');
+  XLSX.writeFile(wb,'student_groups.xlsx');
+  showToast('Export Excel สำเร็จ','success');
+}
+
+function exportCSV(){
+  const rows=[['กลุ่ม','ชื่อกลุ่ม','เลขที่','ชื่อ-สกุล','ห้อง','เพศ','ความสามารถ']];
+  groups.forEach((g,gi)=>{
+    g.members.forEach(m=>rows.push([gi+1,g.name,m.num,m.name,m.room,m.gender==='ช'?'ชาย':'หญิง',m.ability]));
+  });
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='student_groups.csv';a.click();
+  showToast('Export CSV สำเร็จ','success');
+}
+
+function exportPDF(){
+  if(!groups.length){showToast('ยังไม่ได้จัดกลุ่ม','error');return;}
+  const w=window.open('','_blank');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>ผลการจัดกลุ่ม</title>
+  <style>
+    body{font-family:'Kanit',sans-serif;padding:20px;background:#fff}
+    @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&display=swap');
+    h1{text-align:center;color:#1e293b;margin-bottom:20px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .group{border:2px solid #e2e8f0;border-radius:12px;padding:12px;break-inside:avoid}
+    .group-title{font-weight:600;font-size:1rem;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+    .member{font-size:0.82rem;padding:2px 0;color:#374151}
+    @media print{body{padding:10px}.grid{gap:10px}}
+  </style></head><body>
+  <h1>🎯 ผลการจัดกลุ่มนักเรียน</h1>
+  <p style="text-align:center;color:#64748b;margin-bottom:20px">รวม ${groups.length} กลุ่ม | นักเรียน ${students.length} คน | วันที่ ${new Date().toLocaleDateString('th-TH')}</p>
+  <div class="grid">
+  ${groups.map((g,i)=>`
+    <div class="group">
+      <div class="group-title" style="color:${g.color}">${g.name} (${g.members.length} คน)</div>
+      ${g.members.map(m=>`<div class="member">${m.num}. ${m.name} <span style="color:#94a3b8">(${m.gender==='ช'?'ช':'ญ'})</span></div>`).join('')}
+    </div>
+  `).join('')}
+  </div>
+  <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`;
+  w.document.write(html);w.document.close();
+  showToast('เปิดหน้า PDF แล้ว','success');
+}
+
+function exportPNG(){
+  if(!groups.length){showToast('ยังไม่ได้จัดกลุ่ม','error');return;}
+  const canvas=document.createElement('canvas');
+  const cols=Math.min(3,groups.length);
+  const rows=Math.ceil(groups.length/cols);
+  const cw=300,ch=Math.max(200,groups[0].members.length*22+60);
+  canvas.width=cols*cw+40;canvas.height=rows*ch+80;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#f0f4f8';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#f1f5f9';ctx.font='bold 20px sans-serif';ctx.textAlign='center';
+  ctx.fillText('ผลการจัดกลุ่มนักเรียน',canvas.width/2,35);
+  groups.forEach((g,i)=>{
+    const col=i%cols,row=Math.floor(i/cols);
+    const x=col*cw+20,y=row*ch+55;
+    ctx.fillStyle=g.color+'22';ctx.beginPath();ctx.roundRect(x,y,cw-10,ch-10,10);ctx.fill();
+    ctx.strokeStyle=g.color+'88';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle=g.color;ctx.font='bold 14px sans-serif';ctx.textAlign='left';
+    ctx.fillText(g.name+` (${g.members.length} คน)`,x+12,y+24);
+    ctx.fillStyle='#334155';ctx.font='12px sans-serif';
+    g.members.forEach((m,mi)=>{ctx.fillText(`${m.num}. ${m.name}`,x+12,y+44+mi*20);});
+  });
+  const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='student_groups.png';a.click();
+  showToast('Export PNG สำเร็จ','success');
+}
+
+function generateQR(){
+  if(!groups.length){showToast('ยังไม่ได้จัดกลุ่ม','error');return;}
+  const el=document.getElementById('qrcode');el.innerHTML='';
+  const text=groups.map(g=>`${g.name}: ${g.members.map(m=>m.name).join(', ')}`).join('\n');
+  const shortText=text.slice(0,200);
+  try{
+    new QRCode(el,{text:shortText,width:180,height:180,colorDark:'#3b82f6',colorLight:'#ffffff'});
+    document.getElementById('qrNote').textContent='QR Code แสดงข้อมูลกลุ่ม (สแกนเพื่อดู)';
+    showToast('สร้าง QR Code สำเร็จ','success');
+  }catch(e){showToast('เกิดข้อผิดพลาด','error');}
+}
+
+// ===== SETTINGS =====
+function saveSettings(){
+  settings.autoSave=document.getElementById('autoSave').checked;
+  settings.soundEnabled=document.getElementById('soundEnabled').checked;
+  settings.animEnabled=document.getElementById('animEnabled').checked;
+  localStorage.setItem('sgr_settings',JSON.stringify(settings));
+}
+function loadSettings(){
+  try{const s=JSON.parse(localStorage.getItem('sgr_settings')||'{}');Object.assign(settings,s);
+    if(document.getElementById('autoSave')) document.getElementById('autoSave').checked=settings.autoSave!==false;
+    if(document.getElementById('soundEnabled')) document.getElementById('soundEnabled').checked=settings.soundEnabled!==false;
+  }catch(e){}
+}
+function clearStorage(){
+  if(!confirm('ล้างข้อมูลทั้งหมดในเครื่อง?')) return;
+  localStorage.clear();students=[];groups=[];lockedStudents.clear();
+  saveData();renderStudentTable();updateDashboard();
+  showToast('ล้างข้อมูลทั้งหมดแล้ว','info');
+}
+function toggleActiveLearning(){
+  const on=document.getElementById('activeLearning').checked;
+  if(on&&groups.length){
+    const el=document.getElementById('activeLearningContent');
+    el.innerHTML=groups.map(g=>`
+      <div style="background:${g.color}22;border:2px solid ${g.color};border-radius:16px;padding:1.5rem;text-align:center">
+        <div style="font-size:2rem;font-weight:700;color:${g.color};margin-bottom:1rem">${g.name}</div>
+        ${g.members.map(m=>`<div style="font-size:1.1rem;padding:4px 0">${m.name}</div>`).join('')}
+      </div>
+    `).join('');
+    document.getElementById('activeLearningOverlay').style.display='block';
+  } else {
+    document.getElementById('activeLearningOverlay').style.display='none';
+  }
+}
+
+// ===== MODAL =====
+function closeModal(e){
+  if(!e||e.target===document.getElementById('modalOverlay'))
+    document.getElementById('modalOverlay').style.display='none';
+}
+
+// ===== TOAST =====
+function showToast(msg,type='info'){
+  const w=document.getElementById('toastWrap');
+  const t=document.createElement('div');
+  t.className=`toast ${type}`;
+  t.textContent=msg;
+  w.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.5s';setTimeout(()=>t.remove(),500);},2500);
+}
+
+// ===== STORAGE =====
+function saveData(){
+  if(!settings.autoSave) return;
+  try{
+    localStorage.setItem('sgr_students',JSON.stringify(students));
+    localStorage.setItem('sgr_groups',JSON.stringify(groups));
+  }catch(e){}
+}
+function loadData(){
+  try{
+    const s=localStorage.getItem('sgr_students');
+    const g=localStorage.getItem('sgr_groups');
+    if(s) students=JSON.parse(s);
+    if(g) groups=JSON.parse(g);
+  }catch(e){}
+}
+
+// ===== INIT =====
+loadData();
+loadSettings();
+renderStudentTable();
+updateDashboard();
+updateFilterRoom();
+updateWheelItems();
+
+// Initial wheel draw
+setTimeout(()=>drawWheel(),100);
+</script>
+</body>
+</html>
