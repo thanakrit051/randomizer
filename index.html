@@ -1404,41 +1404,60 @@ function playWin(){
 // ===== FULLSCREEN WHEEL =====
 function toggleFullscreen(){
   const ex=document.getElementById('wheelFullscreenMode');
-  if(ex){ex.remove();drawWheel();document.body.style.overflow='';if(ex._keyHandler)document.removeEventListener('keydown',ex._keyHandler);return;}
+  if(ex){
+    if(ex._keyHandler) document.removeEventListener('keydown',ex._keyHandler);
+    ex.remove();drawWheel();document.body.style.overflow='';return;
+  }
   const div=document.createElement('div');
   div.id='wheelFullscreenMode';div.className='wheel-fullscreen';
-  // Compute canvas size: fit within viewport leaving room for right panel
-  const vw=window.innerWidth,vh=window.innerHeight;
-  const isMobile=vw<640;
-  const size=isMobile?Math.min(vw-32,vh*0.5):Math.min(vh-80,vw*0.55);
-  div.innerHTML=
-    '<button class="wf-close" onclick="toggleFullscreen()">✕ ปิด</button>'+
-    '<div class="wf-left">'+
-      '<canvas id="wheelCanvasFull" width="'+Math.round(size)+'" height="'+Math.round(size)+'" style="border-radius:50%;cursor:pointer;filter:drop-shadow(0 8px 32px rgba(0,0,0,.5))" onclick="spinWheelFull()"></canvas>'+
-      '<div class="wf-pointer">◀</div>'+
-    '</div>'+
-    '<div class="wf-right">'+
-      '<div class="wf-result-box">'+
-        '<div class="wf-result-label">ผลการสุ่ม</div>'+
-        '<div class="wf-result-name" id="wheelResultFull">—</div>'+
-      '</div>'+
-      '<div class="wf-controls">'+
-        '<button class="btn btn-primary" onclick="spinWheelFull()" id="spinBtnFull" style="justify-content:center;padding:.7rem;font-size:1rem">🎡 หมุน!</button>'+
-        '<button class="btn btn-secondary" onclick="resetWheelFull()" style="justify-content:center">🔄 รีเซ็ต</button>'+
-      '</div>'+
-      '<div style="font-size:.75rem;color:#64748b;text-align:center">'+
-        'รายการคงเหลือ: <span id="wfItemCount" style="color:#94a3b8;font-weight:600">'+wheelItems.length+'</span>'+
-      '</div>'+
-      '<div class="wf-history">'+
-        '<div class="wf-history-title">ประวัติการสุ่ม</div>'+
-        '<div id="wfHistoryList"><span style="color:#475569;font-size:.78rem">ยังไม่มี</span></div>'+
-      '</div>'+
-    '</div>';
   document.body.appendChild(div);
-  drawWheelFull(wheelAngle);
-  // Prevent background scroll
   document.body.style.overflow='hidden';
-  // Keyboard: Space to spin, Esc to close
+
+  // Size after DOM is ready so we get accurate dimensions
+  function buildWheel(){
+    const vw=div.clientWidth||window.innerWidth;
+    const vh=div.clientHeight||window.innerHeight;
+    const isMobile=vw<640;
+    const rightW=isMobile?0:300; // right panel width + gap
+    const availW=vw-rightW-48;
+    const availH=vh-48;
+    const size=Math.floor(Math.min(availW,availH,600));
+
+    div.innerHTML=
+      '<button class="wf-close" onclick="toggleFullscreen()">✕ ปิด</button>'+
+      '<div class="wf-left">'+
+        '<div style="position:relative;display:inline-block">'+
+          '<canvas id="wheelCanvasFull"'+
+            ' width="'+size+'" height="'+size+'"'+
+            ' style="display:block;width:'+size+'px;height:'+size+'px;border-radius:50%;cursor:pointer;filter:drop-shadow(0 8px 32px rgba(0,0,0,.5))"'+
+            ' onclick="spinWheelFull()"></canvas>'+
+          '<div class="wf-pointer" style="position:absolute;right:-20px;top:50%;transform:translateY(-50%);font-size:2rem;pointer-events:none">◀</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="wf-right">'+
+        '<div class="wf-result-box">'+
+          '<div class="wf-result-label">ผลการสุ่ม</div>'+
+          '<div class="wf-result-name" id="wheelResultFull">—</div>'+
+        '</div>'+
+        '<div class="wf-controls">'+
+          '<button class="btn btn-primary" onclick="spinWheelFull()" id="spinBtnFull" style="justify-content:center;padding:.7rem;font-size:1rem">🎡 หมุน!</button>'+
+          '<button class="btn btn-secondary" onclick="resetWheelFull()" style="justify-content:center">🔄 รีเซ็ต</button>'+
+        '</div>'+
+        '<div style="font-size:.75rem;color:#64748b;text-align:center">'+
+          'รายการคงเหลือ: <span id="wfItemCount" style="color:#94a3b8;font-weight:600">'+wheelItems.length+'</span>'+
+        '</div>'+
+        '<div class="wf-history">'+
+          '<div class="wf-history-title">ประวัติการสุ่ม</div>'+
+          '<div id="wfHistoryList"><span style="color:#475569;font-size:.78rem">ยังไม่มี</span></div>'+
+        '</div>'+
+      '</div>';
+
+    drawWheelFull(wheelAngle);
+  }
+
+  // Wait one frame so the fixed overlay has its real dimensions
+  requestAnimationFrame(function(){ requestAnimationFrame(buildWheel); });
+
   div._keyHandler=function(e){
     if(e.key===' '||e.key==='Enter'){e.preventDefault();spinWheelFull();}
     if(e.key==='Escape'){toggleFullscreen();}
@@ -1448,16 +1467,10 @@ function toggleFullscreen(){
 function drawWheelFull(angle){
   const canvas=document.getElementById('wheelCanvasFull');
   if(!canvas) return;
-  const dpr=window.devicePixelRatio||1;
-  const displayW=canvas.width,displayH=canvas.height;
-  if(canvas._dprSet!==dpr){
-    canvas.width=displayW*dpr;canvas.height=displayH*dpr;
-    canvas.style.width=displayW+'px';canvas.style.height=displayH+'px';
-    canvas._dprSet=dpr;
-  }
+  // canvas.width/height already set to CSS pixel size — draw at 1:1
   const ctx=canvas.getContext('2d');
-  ctx.save();ctx.scale(dpr,dpr);
-  const W=displayW,H=displayH,cx=W/2,cy=H/2,r=cx-8;
+  ctx.save();
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=cx-8;
   ctx.clearRect(0,0,W,H);
   if(!wheelItems.length){ctx.restore();return;}
   const n=wheelItems.length;const arc=2*Math.PI/n;
