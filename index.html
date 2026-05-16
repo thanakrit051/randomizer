@@ -250,8 +250,8 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
 .setting-info p{font-size:0.75rem;color:var(--text3);margin-top:2px}
 
 /* Overlay for sidebar on mobile */
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150;-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer}
-.sidebar-overlay.show{display:block}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150;-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.sidebar-overlay.show{opacity:1;pointer-events:auto}
 
 /* wheel pointer */
 .wheel-pointer{font-size:2rem;line-height:1;position:relative;z-index:1;transform:rotate(90deg)}
@@ -309,7 +309,7 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
 
 <canvas id="particles"></canvas>
 
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()" ontouchend="closeSidebar()"></div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()" ontouchstart="closeSidebar()"></div>
 
 <div class="app">
 <!-- Sidebar -->
@@ -861,18 +861,22 @@ function showPage(id){
 function toggleSidebar(){
   var sb=document.getElementById('sidebar');
   var ov=document.getElementById('sidebarOverlay');
-  var isOpen=sb.classList.contains('open');
-  if(isOpen){
-    sb.classList.remove('open');
-    ov.classList.remove('show');
+  if(sb.classList.contains('open')){
+    closeSidebar();
   } else {
     sb.classList.add('open');
     ov.classList.add('show');
+    ov.style.pointerEvents='auto';
   }
 }
 function closeSidebar(){
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.remove('show');
+  var sb=document.getElementById('sidebar');
+  var ov=document.getElementById('sidebarOverlay');
+  if(!sb||!ov) return;
+  sb.classList.remove('open');
+  ov.classList.remove('show');
+  ov.style.pointerEvents='none';
+  ov.style.opacity='0';
 }
 
 // ===== SAMPLE DATA =====
@@ -1871,21 +1875,23 @@ function loadData(){
 (function(){
   var btn=document.getElementById('hamburgerBtn');
   if(!btn) return;
-  var touched=false;
-  btn.addEventListener('touchend',function(e){
+  var lastT=0;
+  function doToggle(e){
     e.preventDefault();
-    touched=true;
+    var now=Date.now();
+    if(now-lastT<400) return;
+    lastT=now;
     toggleSidebar();
-    setTimeout(function(){touched=false;},300);
-  },{passive:false});
-  btn.addEventListener('click',function(){
-    if(!touched) toggleSidebar();
+  }
+  btn.addEventListener('touchstart',doToggle,{passive:false});
+  btn.addEventListener('click',function(e){
+    if(Date.now()-lastT>400) toggleSidebar();
   });
 })();
 loadData();
 loadSettings();
-// Safari nav fix — delegate touch on sidebar
-document.getElementById('sidebar').addEventListener('touchend',function(e){
+// Safari nav fix
+document.getElementById('sidebar').addEventListener('touchstart',function(e){
   var navItem=e.target.closest('.nav-item');
   if(navItem){
     e.preventDefault();
