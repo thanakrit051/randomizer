@@ -169,7 +169,23 @@ label{font-size:0.82rem;color:var(--text2);margin-bottom:4px;display:block}
 .toggle input:checked+.toggle-slider:before{transform:translateX(17px)}
 
 /* Fullscreen wheel */
-.wheel-fullscreen{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem}
+.wheel-fullscreen{position:fixed;inset:0;z-index:500;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0c1445 100%);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2rem;padding:1rem}
+.wf-left{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 auto;position:relative}
+.wf-right{display:flex;flex-direction:column;gap:1rem;min-width:220px;max-width:280px}
+.wf-result-box{background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:1.25rem 1.5rem;text-align:center}
+.wf-result-label{font-size:.75rem;color:#94a3b8;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em}
+.wf-result-name{font-size:1.5rem;font-weight:700;color:#fff;min-height:2rem;transition:all .3s;word-break:break-word}
+.wf-history{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1rem;max-height:200px;overflow-y:auto}
+.wf-history-title{font-size:.72rem;color:#64748b;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.06em}
+.wf-history-item{font-size:.82rem;color:#cbd5e1;padding:.2rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.wf-history-item:last-child{border-bottom:none}
+.wf-controls{display:flex;flex-direction:column;gap:.6rem}
+.wf-close{position:fixed;top:1rem;right:1rem;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;padding:.4rem .85rem;font-size:.85rem;cursor:pointer;font-family:Kanit,sans-serif;transition:all .2s;z-index:10}
+.wf-close:hover{background:rgba(255,255,255,.2)}
+.wf-pointer{position:absolute;right:-20px;top:50%;transform:translateY(-50%);font-size:2rem;filter:drop-shadow(0 0 8px rgba(0,0,0,.6));pointer-events:none}
+@keyframes wf-win{0%{transform:scale(1)}40%{transform:scale(1.1)}100%{transform:scale(1)}}
+.wf-win{animation:wf-win .5s ease}
+@media(max-width:640px){.wheel-fullscreen{flex-direction:column;gap:1rem}.wf-right{min-width:unset;width:100%}.wf-history{max-height:80px}.wf-pointer{display:none}}
 
 /* Number randomizer */
 .num-result{font-size:5rem;font-weight:700;text-align:center;background:linear-gradient(135deg,var(--blue),var(--indigo));-webkit-background-clip:text;-webkit-text-fill-color:transparent;transition:all 0.1s;min-height:120px;display:flex;align-items:center;justify-content:center}
@@ -1388,76 +1404,150 @@ function playWin(){
 // ===== FULLSCREEN WHEEL =====
 function toggleFullscreen(){
   const ex=document.getElementById('wheelFullscreenMode');
-  if(ex){ex.remove();return;}
+  if(ex){ex.remove();drawWheel();document.body.style.overflow='';if(ex._keyHandler)document.removeEventListener('keydown',ex._keyHandler);return;}
   const div=document.createElement('div');
   div.id='wheelFullscreenMode';div.className='wheel-fullscreen';
-  const size=Math.min(window.innerWidth,window.innerHeight)-100;
-  div.innerHTML=`
-    <button onclick="this.parentElement.remove();drawWheel()" style="position:absolute;top:1rem;right:1rem" class="btn btn-secondary">✕ ปิด</button>
-    <canvas id="wheelCanvasFull" width="${size}" height="${size}" style="border-radius:50%;cursor:pointer"></canvas>
-    <div style="text-align:center">
-      <div id="wheelResultFull" style="font-size:2rem;font-weight:700;color:var(--blue);margin:1rem 0">—</div>
-      <button class="btn btn-primary" onclick="spinWheelFull()" id="spinBtnFull">🎡 หมุน!</button>
-    </div>
-  `;
+  // Compute canvas size: fit within viewport leaving room for right panel
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const isMobile=vw<640;
+  const size=isMobile?Math.min(vw-32,vh*0.5):Math.min(vh-80,vw*0.55);
+  div.innerHTML=
+    '<button class="wf-close" onclick="toggleFullscreen()">✕ ปิด</button>'+
+    '<div class="wf-left">'+
+      '<canvas id="wheelCanvasFull" width="'+Math.round(size)+'" height="'+Math.round(size)+'" style="border-radius:50%;cursor:pointer;filter:drop-shadow(0 8px 32px rgba(0,0,0,.5))" onclick="spinWheelFull()"></canvas>'+
+      '<div class="wf-pointer">◀</div>'+
+    '</div>'+
+    '<div class="wf-right">'+
+      '<div class="wf-result-box">'+
+        '<div class="wf-result-label">ผลการสุ่ม</div>'+
+        '<div class="wf-result-name" id="wheelResultFull">—</div>'+
+      '</div>'+
+      '<div class="wf-controls">'+
+        '<button class="btn btn-primary" onclick="spinWheelFull()" id="spinBtnFull" style="justify-content:center;padding:.7rem;font-size:1rem">🎡 หมุน!</button>'+
+        '<button class="btn btn-secondary" onclick="resetWheelFull()" style="justify-content:center">🔄 รีเซ็ต</button>'+
+      '</div>'+
+      '<div style="font-size:.75rem;color:#64748b;text-align:center">'+
+        'รายการคงเหลือ: <span id="wfItemCount" style="color:#94a3b8;font-weight:600">'+wheelItems.length+'</span>'+
+      '</div>'+
+      '<div class="wf-history">'+
+        '<div class="wf-history-title">ประวัติการสุ่ม</div>'+
+        '<div id="wfHistoryList"><span style="color:#475569;font-size:.78rem">ยังไม่มี</span></div>'+
+      '</div>'+
+    '</div>';
   document.body.appendChild(div);
   drawWheelFull(wheelAngle);
+  // Prevent background scroll
+  document.body.style.overflow='hidden';
+  // Keyboard: Space to spin, Esc to close
+  div._keyHandler=function(e){
+    if(e.key===' '||e.key==='Enter'){e.preventDefault();spinWheelFull();}
+    if(e.key==='Escape'){toggleFullscreen();}
+  };
+  document.addEventListener('keydown',div._keyHandler);
 }
 function drawWheelFull(angle){
   const canvas=document.getElementById('wheelCanvasFull');
   if(!canvas) return;
+  const dpr=window.devicePixelRatio||1;
+  const displayW=canvas.width,displayH=canvas.height;
+  if(canvas._dprSet!==dpr){
+    canvas.width=displayW*dpr;canvas.height=displayH*dpr;
+    canvas.style.width=displayW+'px';canvas.style.height=displayH+'px';
+    canvas._dprSet=dpr;
+  }
   const ctx=canvas.getContext('2d');
-  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=cx-10;
+  ctx.save();ctx.scale(dpr,dpr);
+  const W=displayW,H=displayH,cx=W/2,cy=H/2,r=cx-8;
   ctx.clearRect(0,0,W,H);
-  if(!wheelItems.length) return;
+  if(!wheelItems.length){ctx.restore();return;}
   const n=wheelItems.length;const arc=2*Math.PI/n;
   const colors=['#3b82f6','#ec4899','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#84cc16','#f97316','#a855f7'];
-  wheelItems.forEach((item,i)=>{
+  // Draw shadow ring
+  ctx.beginPath();ctx.arc(cx,cy,r+4,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,0.25)';ctx.fill();
+  // Draw segments
+  wheelItems.forEach(function(item,i){
     const s=angle+i*arc,e=s+arc;
     ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,s,e);ctx.closePath();
     ctx.fillStyle=colors[i%colors.length];ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1.5;ctx.stroke();
+    // Text
     ctx.save();ctx.translate(cx,cy);ctx.rotate(s+arc/2);
     ctx.textAlign='right';ctx.fillStyle='#fff';
-    const fs=Math.max(12,Math.min(22,Math.floor(300/n)));
-    ctx.font=`${fs}px Kanit`;
-    ctx.fillText(item.length>14?item.slice(0,14)+'…':item,r-16,fs/3);
+    ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=3;
+    const fs=Math.max(11,Math.min(20,Math.floor(260/n)));
+    ctx.font='600 '+fs+'px Kanit';
+    const maxChars=Math.max(6,Math.floor(r*0.9/fs*2));
+    const label=item.length>maxChars?item.slice(0,maxChars)+'…':item;
+    ctx.fillText(label,r-14,fs*0.38);
     ctx.restore();
   });
-  ctx.beginPath();ctx.arc(cx,cy,40,0,Math.PI*2);
-  ctx.fillStyle='#ffffff';ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=2;ctx.stroke();
-  ctx.fillStyle='#1e293b';ctx.font='bold 24px Kanit';ctx.textAlign='center';ctx.fillText('🎲',cx,cy+8);
+  // Outer ring
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=3;ctx.stroke();
+  // Center circle
+  ctx.beginPath();ctx.arc(cx,cy,36,0,Math.PI*2);
+  ctx.fillStyle='#1e293b';ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=2;ctx.stroke();
+  ctx.font='bold 22px Kanit';ctx.textAlign='center';ctx.fillStyle='#fff';
+  ctx.shadowColor='transparent';ctx.fillText('🎲',cx,cy+8);
+  ctx.restore();
+}
+function resetWheelFull(){
+  wheelItems=[...wheelItemsAll];
+  const el=document.getElementById('wfItemCount');
+  if(el) el.textContent=wheelItems.length;
+  const hl=document.getElementById('wfHistoryList');
+  if(hl) hl.innerHTML='<span style="color:#475569;font-size:.78rem">ยังไม่มี</span>';
+  document.getElementById('wheelResultFull').textContent='—';
+  document.getElementById('wheelItemCount').textContent=wheelItems.length;
+  drawWheelFull(wheelAngle);
+  showToast('รีเซ็ตวงล้อแล้ว','info');
 }
 let spinningFull=false;
 function spinWheelFull(){
   if(spinningFull||!wheelItems.length) return;
   spinningFull=true;
-  document.getElementById('spinBtnFull').disabled=true;
+  const btn=document.getElementById('spinBtnFull');
+  if(btn) btn.disabled=true;
   playTick();
-  const total=Math.PI*2*(8+Math.random()*6);
-  const dur=4000+Math.random()*2000;
+  const totalRot=Math.PI*2*(8+Math.random()*6);
+  const dur=4500+Math.random()*1500;
   const t0=performance.now();
   const a0=wheelAngle;
+  function easeOut(t){return 1-Math.pow(1-t,4);}
   function anim(now){
-    const el=now-t0,t=Math.min(el/dur,1),ease=1-Math.pow(1-t,4);
-    wheelAngle=a0+total*ease;
-    drawWheelFull(wheelAngle);drawWheel(wheelAngle);
+    const el=now-t0,t=Math.min(el/dur,1);
+    wheelAngle=a0+totalRot*easeOut(t);
+    drawWheelFull(wheelAngle);
+    drawWheel(wheelAngle);
     if(t<1){requestAnimationFrame(anim);}
     else{
-      spinningFull=false;document.getElementById('spinBtnFull').disabled=false;
+      spinningFull=false;
+      if(btn) btn.disabled=false;
       const n=wheelItems.length,arc=2*Math.PI/n;
       const na=((wheelAngle%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
       const idx=Math.floor(n-(na/arc)%n)%n;
       const winner=wheelItems[idx];
-      document.getElementById('wheelResultFull').textContent=winner;
+      // Update result
+      const rf=document.getElementById('wheelResultFull');
+      if(rf){rf.textContent=winner;rf.classList.remove('wf-win');void rf.offsetWidth;rf.classList.add('wf-win');}
       document.getElementById('wheelResultName').textContent=winner;
+      // History
       wheelHistoryArr.unshift(winner);
-      if(wheelHistoryArr.length>10)wheelHistoryArr.pop();
+      if(wheelHistoryArr.length>10) wheelHistoryArr.pop();
       document.getElementById('wheelHistoryList').textContent=wheelHistoryArr.join(' → ');
+      const whl=document.getElementById('wfHistoryList');
+      if(whl) whl.innerHTML=wheelHistoryArr.map(function(n,i){
+        return '<div class="wf-history-item">'+(i===0?'🎯 ':'')+(i+1)+'. '+n+'</div>';
+      }).join('');
       playWin();
       if(document.getElementById('removeAfterSpin').checked){
         wheelItems.splice(idx,1);
         document.getElementById('wheelItemCount').textContent=wheelItems.length;
+        const wc=document.getElementById('wfItemCount');
+        if(wc) wc.textContent=wheelItems.length;
+        drawWheelFull(wheelAngle);
       }
     }
   }
