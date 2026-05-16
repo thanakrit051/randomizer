@@ -490,11 +490,20 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
           <div class="form-group">
             <label>สุ่มจาก</label>
             <select id="wheelSource" onchange="updateWheelItems()">
-              <option value="students">รายชื่อนักเรียน</option>
+              <option value="students">รายชื่อนักเรียน (ทุกห้อง)</option>
+              <option value="students_room">รายชื่อนักเรียน (เลือกห้อง)</option>
               <option value="groups">รายชื่อกลุ่ม</option>
               <option value="leaders">หัวหน้ากลุ่ม</option>
               <option value="custom">กำหนดเอง</option>
             </select>
+          </div>
+          <div id="wheelRoomWrap" style="display:none">
+            <div class="form-group">
+              <label>เลือกห้อง</label>
+              <select id="wheelRoomFilter" onchange="updateWheelItems()">
+                <option value="">-- เลือกห้อง --</option>
+              </select>
+            </div>
           </div>
           <div id="customItemsWrap" style="display:none">
             <div class="form-group">
@@ -960,7 +969,13 @@ function setGroupTab(idx,prefix){
 function getGroupCount(){
   if(groupTabIndex===0) return Math.max(2,+document.getElementById('numGroups').value||6);
   const perGroup=Math.max(2,+document.getElementById('numPerGroup').value||6);
-  return Math.max(2,Math.ceil(students.length/perGroup));
+  const roomFilter=document.getElementById('filterRoom')?.value||'';
+  const genderFilter=document.getElementById('filterGender')?.value||'';
+  const filteredCount=students.filter(s=>
+    (roomFilter===''||s.room===roomFilter)&&
+    (genderFilter===''||s.gender===genderFilter)
+  ).length;
+  return Math.max(2,Math.ceil(filteredCount/perGroup));
 }
 
 function getGroupName(i){
@@ -1107,7 +1122,19 @@ let wheelItemsAll = [];
 function updateWheelItems(){
   const src=document.getElementById('wheelSource').value;
   document.getElementById('customItemsWrap').style.display=src==='custom'?'block':'none';
+  document.getElementById('wheelRoomWrap').style.display=src==='students_room'?'block':'none';
+  // populate room dropdown
+  if(src==='students_room'){
+    const sel=document.getElementById('wheelRoomFilter');
+    const rooms=[...new Set(students.map(s=>s.room))].sort();
+    const cur=sel.value;
+    sel.innerHTML='<option value="">-- เลือกห้อง --</option>'+rooms.map(r=>`<option value="${r}"${r===cur?' selected':''}>${r}</option>`).join('');
+  }
   if(src==='students') wheelItemsAll=students.map(s=>s.name);
+  else if(src==='students_room'){
+    const room=document.getElementById('wheelRoomFilter')?.value||'';
+    wheelItemsAll=students.filter(s=>!room||s.room===room).map(s=>s.name);
+  }
   else if(src==='groups') wheelItemsAll=groups.map(g=>g.name);
   else if(src==='leaders') wheelItemsAll=groups.map(g=>g.members[0]?.name||'').filter(Boolean);
   else return;
