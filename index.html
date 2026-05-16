@@ -169,9 +169,9 @@ label{font-size:0.82rem;color:var(--text2);margin-bottom:4px;display:block}
 .toggle input:checked+.toggle-slider:before{transform:translateX(17px)}
 
 /* Fullscreen wheel */
-.wheel-fullscreen{position:fixed;inset:0;z-index:500;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0c1445 100%);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2rem;padding:1rem}
+.wheel-fullscreen{position:fixed;inset:0;z-index:500;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0c1445 100%);display:flex;flex-direction:row;align-items:center;justify-content:center;gap:2rem;padding:1.5rem;overflow:hidden}
 .wf-left{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:0 0 auto;position:relative}
-.wf-right{display:flex;flex-direction:column;gap:1rem;min-width:220px;max-width:280px}
+.wf-right{display:flex;flex-direction:column;gap:1rem;width:280px;flex-shrink:0}
 .wf-result-box{background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.15);border-radius:16px;padding:1.25rem 1.5rem;text-align:center}
 .wf-result-label{font-size:.75rem;color:#94a3b8;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em}
 .wf-result-name{font-size:1.5rem;font-weight:700;color:#fff;min-height:2rem;transition:all .3s;word-break:break-word}
@@ -1418,20 +1418,22 @@ function toggleFullscreen(){
     const vw=div.clientWidth||window.innerWidth;
     const vh=div.clientHeight||window.innerHeight;
     const isMobile=vw<640;
-    const rightW=isMobile?0:300; // right panel width + gap
-    const availW=vw-rightW-48;
+    const rightW=isMobile?0:316;
+    const gap=isMobile?0:32;
+    const availW=vw-rightW-gap-48;
     const availH=vh-48;
-    const size=Math.floor(Math.min(availW,availH,600));
+    window._wfSize=Math.floor(Math.min(availW,availH,580));
+    const size=window._wfSize;
 
     div.innerHTML=
       '<button class="wf-close" onclick="toggleFullscreen()">✕ ปิด</button>'+
       '<div class="wf-left">'+
-        '<div style="position:relative;display:inline-block">'+
+        '<div style="position:relative;width:'+size+'px;height:'+size+'px;flex-shrink:0">'+
           '<canvas id="wheelCanvasFull"'+
             ' width="'+size+'" height="'+size+'"'+
-            ' style="display:block;width:'+size+'px;height:'+size+'px;border-radius:50%;cursor:pointer;filter:drop-shadow(0 8px 32px rgba(0,0,0,.5))"'+
+            ' style="position:absolute;top:0;left:0;width:'+size+'px;height:'+size+'px;border-radius:50%;cursor:pointer;filter:drop-shadow(0 8px 32px rgba(0,0,0,.6))"'+
             ' onclick="spinWheelFull()"></canvas>'+
-          '<div class="wf-pointer" style="position:absolute;right:-20px;top:50%;transform:translateY(-50%);font-size:2rem;pointer-events:none">◀</div>'+
+          '<div style="position:absolute;right:-24px;top:50%;transform:translateY(-50%);font-size:2.2rem;pointer-events:none;filter:drop-shadow(0 0 6px rgba(0,0,0,.8))">◀</div>'+
         '</div>'+
       '</div>'+
       '<div class="wf-right">'+
@@ -1455,7 +1457,7 @@ function toggleFullscreen(){
     drawWheelFull(wheelAngle);
   }
 
-  // Wait one frame so the fixed overlay has its real dimensions
+  // Wait two frames so the fixed overlay has its real dimensions
   requestAnimationFrame(function(){ requestAnimationFrame(buildWheel); });
 
   div._keyHandler=function(e){
@@ -1467,11 +1469,12 @@ function toggleFullscreen(){
 function drawWheelFull(angle){
   const canvas=document.getElementById('wheelCanvasFull');
   if(!canvas) return;
-  // canvas.width/height already set to CSS pixel size — draw at 1:1
+  // Always use the stored display size — NEVER read/write canvas.width here
+  const S=window._wfSize||canvas.width;
   const ctx=canvas.getContext('2d');
   ctx.save();
-  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,r=cx-8;
-  ctx.clearRect(0,0,W,H);
+  const W=S,H=S,cx=S/2,cy=S/2,r=cx-8;
+  ctx.clearRect(0,0,S,S);
   if(!wheelItems.length){ctx.restore();return;}
   const n=wheelItems.length;const arc=2*Math.PI/n;
   const colors=['#3b82f6','#ec4899','#10b981','#f59e0b','#8b5cf6','#06b6d4','#ef4444','#84cc16','#f97316','#a855f7'];
