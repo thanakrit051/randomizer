@@ -357,6 +357,27 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
         </div>
       </div>
 
+      <!-- Google Sheets Import Card -->
+      <div class="card" style="margin-bottom:1rem;border:1.5px solid rgba(37,99,235,0.25);background:rgba(37,99,235,0.03)">
+        <div class="card-title" style="margin-bottom:0.65rem">🔗 นำเข้าจาก Google Sheets</div>
+        <p style="font-size:0.78rem;color:var(--text2);margin-bottom:0.75rem">วาง URL จาก Google Sheets แล้วกด Load — ระบบจะจำ URL ไว้ให้ เปิดครั้งต่อไปโหลดอัตโนมัติ</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" id="sheetsUrl" placeholder="https://docs.google.com/spreadsheets/d/..." style="flex:1;min-width:200px;font-size:0.8rem">
+          <button class="btn btn-primary" onclick="loadFromSheets()">📥 Load Sheets</button>
+          <button class="btn btn-secondary btn-sm" onclick="clearSheetsUrl()" title="ลบ URL ที่บันทึกไว้">🗑️ ล้าง URL</button>
+        </div>
+        <div id="sheetsStatus" style="margin-top:0.6rem;font-size:0.78rem;display:none"></div>
+        <div style="margin-top:0.65rem;font-size:0.72rem;color:var(--text3)">
+          ⚠️ Sheets ต้องตั้งเป็น <strong>Anyone with the link → Viewer</strong> &nbsp;|&nbsp; คอลัมน์: เลขที่ · ชื่อ-สกุล · ห้อง · เพศ(ช/ญ) · ความสามารถ(สูง/กลาง/ต่ำ)
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:0.75rem;color:var(--text3)">หรืออัปโหลดไฟล์</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+
       <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
         <div class="upload-icon">📂</div>
         <p><strong>คลิกหรือลากไฟล์มาวางที่นี่</strong></p>
@@ -1572,8 +1593,92 @@ updateDashboard();
 updateFilterRoom();
 updateWheelItems();
 
+// Restore saved Sheets URL
+setTimeout(()=>restoreSheetsUrl(), 100);
+
 // Initial wheel draw
 setTimeout(()=>drawWheel(),100);
+
+// ===== GOOGLE SHEETS IMPORT =====
+function extractSheetId(url){
+  var m=url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  return m?m[1]:null;
+}
+function sheetsStatus(msg,type){
+  type=type||'info';
+  var el=document.getElementById('sheetsStatus');
+  if(!el) return;
+  el.style.display='block';
+  var bg={'info':'rgba(37,99,235,0.08)','success':'rgba(5,150,105,0.08)','error':'rgba(220,38,38,0.08)','loading':'rgba(245,158,11,0.08)'};
+  var fg={'info':'#1d4ed8','success':'#059669','error':'#dc2626','loading':'#d97706'};
+  el.style.background=bg[type]||bg.info;
+  el.style.color=fg[type]||fg.info;
+  el.style.padding='0.4rem 0.75rem';
+  el.style.borderRadius='6px';
+  el.textContent=msg;
+}
+function loadFromSheets(){
+  var rawUrl=document.getElementById('sheetsUrl').value.trim();
+  if(!rawUrl){showToast('กรุณาวาง URL Google Sheets ก่อน','error');return;}
+  var id=extractSheetId(rawUrl);
+  if(!id){sheetsStatus('❌ URL ไม่ถูกต้อง — ตรวจสอบอีกครั้ง','error');return;}
+  sheetsStatus('⏳ กำลังโหลดข้อมูล...','loading');
+  var csvUrl='https://docs.google.com/spreadsheets/d/'+id+'/export?format=csv&gid=0';
+  fetch(csvUrl)
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return res.text();
+    })
+    .then(function(text){
+      var lines=text.split('\n');
+      var rows=lines.map(function(l){
+        var cells=[];var cur='';var inQ=false;
+        for(var i=0;i<l.length;i++){
+          if(l[i]==='"'){inQ=!inQ;continue;}
+          if(l[i]===','&&!inQ){cells.push(cur.trim());cur='';continue;}
+          cur+=l[i];
+        }
+        cells.push(cur.trim());
+        return cells;
+      }).filter(function(r){return r.some(function(c){return c;});});
+      var startRow=(rows[0]&&isNaN(rows[0][0]))?1:0;
+      var imported=[];
+      for(var i=startRow;i<rows.length;i++){
+        var r=rows[i];
+        if(!r[1]) continue;
+        imported.push({id:Date.now()+i,num:parseInt(r[0])||i,name:r[1]||'',room:r[2]||'',gender:r[3]||'ช',ability:r[4]||'กลาง',prevGroup:r[5]||''});
+      }
+      if(!imported.length){sheetsStatus('❌ ไม่พบข้อมูล — ตรวจสอบโครงสร้างคอลัมน์','error');return;}
+      students=imported;
+      saveData();
+      localStorage.setItem('sgr_sheets_url',rawUrl);
+      renderStudentTable();
+      updateDashboard();
+      updateFilterRoom();
+      sheetsStatus('✅ โหลดสำเร็จ '+imported.length+' คน — URL บันทึกไว้แล้ว เปิดครั้งหน้าโหลดอัตโนมัติ','success');
+      showToast('โหลดจาก Sheets สำเร็จ '+imported.length+' คน','success');
+    })
+    .catch(function(){
+      sheetsStatus('❌ โหลดไม่ได้ — ตรวจสอบว่า Sheets ตั้งเป็น "Anyone with the link" แล้วหรือยัง','error');
+      showToast('โหลดจาก Sheets ไม่สำเร็จ','error');
+    });
+}
+function clearSheetsUrl(){
+  localStorage.removeItem('sgr_sheets_url');
+  document.getElementById('sheetsUrl').value='';
+  var el=document.getElementById('sheetsStatus');
+  if(el) el.style.display='none';
+  showToast('ลบ URL ที่บันทึกไว้แล้ว','info');
+}
+function restoreSheetsUrl(){
+  var saved=localStorage.getItem('sgr_sheets_url');
+  if(saved){
+    var inp=document.getElementById('sheetsUrl');
+    if(inp) inp.value=saved;
+    sheetsStatus('🔄 พบ URL ที่บันทึกไว้ — กด "Load Sheets" เพื่อโหลดรายชื่อล่าสุด','info');
+  }
+}
+
 </script>
 </body>
 </html>
