@@ -39,12 +39,12 @@ body{font-family:'Kanit',sans-serif;background:var(--bg);color:var(--text);min-h
 
 /* Layout */
 .app{position:relative;z-index:1;display:flex;height:100vh;overflow:hidden}
-.sidebar{width:220px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:transform 0.3s;z-index:100}
+.sidebar{width:220px;flex-shrink:0;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:transform 0.3s ease;z-index:100}
 .sidebar-logo{padding:1.25rem 1rem;border-bottom:1px solid var(--border)}
 .sidebar-logo h1{font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,var(--blue),var(--indigo));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .sidebar-logo p{font-size:0.7rem;color:var(--text3);margin-top:2px}
 .sidebar-nav{flex:1;padding:0.75rem 0;overflow-y:auto}
-.nav-item{display:flex;align-items:center;gap:10px;padding:0.65rem 1rem;cursor:pointer;border-radius:0;transition:all 0.2s;color:var(--text2);font-size:0.85rem;border-left:3px solid transparent}
+.nav-item{display:flex;align-items:center;gap:10px;padding:0.65rem 1rem;cursor:pointer;border-radius:0;transition:all 0.2s;color:var(--text2);font-size:0.85rem;border-left:3px solid transparent;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .nav-item:hover{color:var(--text);background:var(--glass)}
 .nav-item.active{color:var(--blue);background:rgba(37,99,235,0.08);border-left-color:var(--blue)}
 .nav-icon{font-size:1.1rem;width:20px;text-align:center}
@@ -69,7 +69,7 @@ body{font-family:'Kanit',sans-serif;background:var(--bg);color:var(--text);min-h
 .stat-label{font-size:0.75rem;color:var(--text2);margin-top:4px}
 
 /* Buttons */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:0.55rem 1.1rem;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:'Kanit',sans-serif;font-size:0.85rem;font-weight:500;transition:all 0.2s;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0.55rem 1.1rem;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:'Kanit',sans-serif;font-size:0.85rem;font-weight:500;transition:all 0.2s;white-space:nowrap;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .btn:active{transform:scale(0.97)}
 .btn-primary{background:linear-gradient(135deg,var(--blue),var(--indigo));color:#fff;box-shadow:0 2px 12px rgba(99,102,241,0.4)}
 .btn-primary:hover{box-shadow:0 4px 20px rgba(99,102,241,0.6)}
@@ -225,13 +225,14 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
 
 /* Responsive */
 @media(max-width:768px){
-  .sidebar{position:fixed;left:0;top:0;height:100%;transform:translateX(-100%)}
+  .sidebar{position:fixed;left:0;top:0;height:100%;transform:translateX(-100%);will-change:transform}
   .sidebar.open{transform:translateX(0)}
   .hamburger{display:block}
   .form-row,.grid-2,.grid-3{grid-template-columns:1fr}
   .content{padding:1rem}
   .groups-grid{grid-template-columns:1fr 1fr}
   .stats-grid{grid-template-columns:1fr 1fr}
+  .main{width:100%}
 }
 @media(max-width:480px){
   .groups-grid{grid-template-columns:1fr}
@@ -249,7 +250,7 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
 .setting-info p{font-size:0.75rem;color:var(--text3);margin-top:2px}
 
 /* Overlay for sidebar on mobile */
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99;-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer}
 .sidebar-overlay.show{display:block}
 
 /* wheel pointer */
@@ -308,7 +309,7 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
 
 <canvas id="particles"></canvas>
 
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()" ontouchend="closeSidebar()"></div>
 
 <div class="app">
 <!-- Sidebar -->
@@ -348,7 +349,7 @@ input[type=range]{padding:0;height:4px;cursor:pointer;accent-color:var(--blue)}
 <!-- Main -->
 <div class="main">
   <div class="topbar">
-    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <button class="hamburger" id="hamburgerBtn">☰</button>
     <h2 id="pageTitle">📊 Dashboard</h2>
   </div>
 
@@ -844,9 +845,10 @@ const GROUP_COLORS = ['#3b82f6','#ec4899','#10b981','#f59e0b','#8b5cf6','#06b6d4
 const pageTitles = {dashboard:'📊 Dashboard',upload:'📤 อัปโหลดรายชื่อ',generator:'🎯 จัดกลุ่ม',wheel:'🎡 วงล้อสุ่ม',number:'🔢 สุ่มเลขที่',export:'💾 Export',settings:'⚙️ Settings'};
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach((el,i)=>{
-    const pages=['dashboard','upload','generator','wheel','number','export','settings'];
+  var pg=document.getElementById('page-'+id);
+  if(pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(el,i){
+    var pages=['dashboard','upload','generator','wheel','number','export','settings'];
     el.classList.toggle('active', pages[i]===id);
   });
   document.getElementById('pageTitle').textContent = pageTitles[id]||id;
@@ -857,8 +859,16 @@ function showPage(id){
   if(id==='upload') renderStudentTable();
 }
 function toggleSidebar(){
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('show');
+  var sb=document.getElementById('sidebar');
+  var ov=document.getElementById('sidebarOverlay');
+  var isOpen=sb.classList.contains('open');
+  if(isOpen){
+    sb.classList.remove('open');
+    ov.classList.remove('show');
+  } else {
+    sb.classList.add('open');
+    ov.classList.add('show');
+  }
 }
 function closeSidebar(){
   document.getElementById('sidebar').classList.remove('open');
@@ -1857,8 +1867,33 @@ function loadData(){
 }
 
 // ===== INIT =====
+// Safari-safe hamburger
+(function(){
+  var btn=document.getElementById('hamburgerBtn');
+  if(!btn) return;
+  var touched=false;
+  btn.addEventListener('touchend',function(e){
+    e.preventDefault();
+    touched=true;
+    toggleSidebar();
+    setTimeout(function(){touched=false;},300);
+  },{passive:false});
+  btn.addEventListener('click',function(){
+    if(!touched) toggleSidebar();
+  });
+})();
 loadData();
 loadSettings();
+// Safari nav fix — ensure nav items respond to touch
+document.querySelectorAll('.nav-item').forEach(function(el){
+  var touched=false;
+  el.addEventListener('touchend',function(e){
+    e.preventDefault();
+    touched=true;
+    el.click();
+    setTimeout(function(){touched=false;},300);
+  },{passive:false});
+});
 renderStudentTable();
 updateDashboard();
 updateFilterRoom();
