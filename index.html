@@ -976,7 +976,14 @@ function generateGroups(){
   if(students.length<2){showToast('ต้องมีนักเรียนอย่างน้อย 2 คน','error');return;}
   const n=getGroupCount();
   const mode=document.getElementById('shuffleMode').value;
-  let pool=students.filter(s=>!lockedStudents.has(s.id));
+  const roomFilter=document.getElementById('filterRoom')?.value||'';
+  const genderFilter=document.getElementById('filterGender')?.value||'';
+  let pool=students.filter(s=>
+    !lockedStudents.has(s.id)&&
+    (roomFilter===''||s.room===roomFilter)&&
+    (genderFilter===''||s.gender===genderFilter)
+  );
+  if(pool.length<2){showToast('นักเรียนที่กรองแล้วน้อยเกินไป (ต้องมีอย่างน้อย 2 คน)','error');return;}
   // build initial groups
   groups=Array.from({length:n},(_,i)=>({name:getGroupName(i),color:GROUP_COLORS[i%GROUP_COLORS.length],members:[]}));
 
@@ -1021,7 +1028,13 @@ function generateGroups(){
 function reshuffleUnlocked(){
   if(!groups.length){generateGroups();return;}
   const n=groups.length;
-  let pool=students.filter(s=>!lockedStudents.has(s.id));
+  const roomFilter2=document.getElementById('filterRoom')?.value||'';
+  const genderFilter2=document.getElementById('filterGender')?.value||'';
+  let pool=students.filter(s=>
+    !lockedStudents.has(s.id)&&
+    (roomFilter2===''||s.room===roomFilter2)&&
+    (genderFilter2===''||s.gender===genderFilter2)
+  );
   const mode=document.getElementById('shuffleMode').value;
   groups.forEach(g=>g.members=g.members.filter(m=>lockedStudents.has(m.id)));
   const shuffled = mode==='gender'
